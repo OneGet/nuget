@@ -49,7 +49,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         public void EnsureProjectFactoryDoesNotAddFileThatIsAlreadyInPackage()
         {
             // Setup
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             

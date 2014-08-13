@@ -24,7 +24,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         public void HelpCommand_HelpMessage(string command)
         {
             // Arrange
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             // Act 
@@ -43,7 +43,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         public void HelpCommand_SpecCommand()
         {
             // Arrange
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             // Act 

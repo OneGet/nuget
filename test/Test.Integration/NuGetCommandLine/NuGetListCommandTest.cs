@@ -114,7 +114,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void ListCommand_Simple()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -178,7 +178,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void ListCommand_OnlyShowListed()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -243,7 +243,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void ListCommand_VerboseOutput()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -307,7 +307,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void ListCommand_AllVersions()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -371,7 +371,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void ListCommand_Prerelease()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -435,7 +435,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void ListCommand_AllVersionsPrerelease()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());

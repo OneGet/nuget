@@ -67,7 +67,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -155,7 +155,7 @@ EndProject");
             var repositoryPath = Path.Combine(workingPath, Guid.NewGuid().ToString());
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -275,7 +275,7 @@ EndProject");
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -377,7 +377,7 @@ EndProject");
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -481,7 +481,7 @@ EndProject");
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -570,7 +570,7 @@ EndProject");
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -668,7 +668,7 @@ EndProject");
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -748,7 +748,7 @@ EndProject");
             var repositoryPath = Path.Combine(workingPath, Guid.NewGuid().ToString());
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -823,7 +823,7 @@ EndProject");
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var proj2Directory = Path.Combine(workingPath, "proj2");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -908,7 +908,7 @@ EndProject");
         [Fact]
         public void RestoreCommand_FromHttpSource()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var workingDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());

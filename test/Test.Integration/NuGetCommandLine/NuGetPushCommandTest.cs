@@ -319,7 +319,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void PushCommand_PushToServerWontRetryForever()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -369,7 +369,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void PushCommand_PushToServerBasicAuth()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -461,7 +461,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void PushCommand_PushToServerBasicAuthDisableBuffering()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -553,7 +553,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void PushCommand_PushToServerIntegratedWindowsAuthentication()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -615,7 +615,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void PushCommand_PushToServerIntegratedWindowsAuthenticationDisableBuffering()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());

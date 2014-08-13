@@ -254,7 +254,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
             var repositoryPath = Path.Combine(workingPath, Guid.NewGuid().ToString());
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -326,7 +326,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
             var repositoryPath = Path.Combine(workingPath, Guid.NewGuid().ToString());
             var proj1Directory = Path.Combine(workingPath, "proj1");
             var currentDirectory = Directory.GetCurrentDirectory();
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
 
             try
@@ -390,7 +390,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void InstallCommand_GetLastestReleaseVersion()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -470,7 +470,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void InstallCommand_GetLastestPrereleaseVersion()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -550,7 +550,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void InstallCommand_WithVersionSpecified()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var workingDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -622,7 +622,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void InstallCommand_WillTryNewVersionsByAppendingZeros()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var workingDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -680,7 +680,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void InstallCommand_WillUseCachedFile()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());
@@ -766,7 +766,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void InstallCommand_DownloadPackageWhenHashChanges()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var tempPath = Path.GetTempPath();
             var packageDirectory = Path.Combine(tempPath, Guid.NewGuid().ToString());

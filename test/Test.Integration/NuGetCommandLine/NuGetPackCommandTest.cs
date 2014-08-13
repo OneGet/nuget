@@ -18,7 +18,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         [Fact]
         public void PackCommand_WithProjectReferences()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             
@@ -129,7 +129,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_WithProjectReferencesSymbols()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -245,7 +245,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_ReferencedProjectWithNuspecFile()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -365,7 +365,7 @@ namespace Proj2
         public void PackCommand_ReferencedProjectWithCustomTokensInNuspec() {
             const string prefixTokenValue = "fooBar";
 
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -469,7 +469,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_NuspecFileWithTokens()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -545,7 +545,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_ProjectReferencedByMultipleProjects()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -603,7 +603,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_ReferencedProjectWithDifferentTarget()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -652,7 +652,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_IncludeReferencedProjectsOff()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -784,7 +784,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_PropertiesAppliedToReferencedProjects()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -912,7 +912,7 @@ namespace Proj2
         [Fact]
         public void PackCommand_ExcludesFilesOutsideRoot()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -980,7 +980,7 @@ namespace Proj2
         [InlineData("packages.proj1.config")]
         public void PackCommand_PackagesAddedAsDependencies(string packagesConfigFileName)
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -1075,7 +1075,7 @@ namespace Proj1
         [Fact]
         public void PackCommand_WarningDependencyVersionNotSpecified()
         {
-            var targetDir = ConfigurationManager.AppSettings["TargetDir"];
+            var targetDir = ConfigurationManager.AppSettings["TargetDir"] ?? Environment.CurrentDirectory;
             var nugetexe = Path.Combine(targetDir, "nuget.exe");
             var workingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
