@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity xmlns="http://standards.iso.org/iso/19770/-2/2014/schema.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  xmlns:oneget="http://oneget.org/swidtag"
+    patch="false"
+    media="(OS:windows)"
+    name="OneGet-Bootstrap"
+    tagVersion="1" uniqueId="OneGet.Bootstrap.1"
+    version="1.0" versionScheme="multipartnumeric">
+
+    <!--
+        This swidtag is a placeholder that has pointers to the SWIDTAGs for
+        the providers that the bootstrapper can download.
+
+        The target files here will be treated as SWIDTAGs that containt LINKs
+        that point to actual installation media
+    -->
+
+    <!-- NuGet Provider Swidtag Links -->
+    <Link
+        href="https://oneget.org/nuget.swidtag"
+        type="application/octet-stream"
+        rel="component"
+        artifact="nuget"
+        oneget:type="provider"
+        media="(OS:windows)"
+    />
+
+    <Link
+        href="https://go.microsoft.com/fwlink/?LinkId=404335"
+        type="application/octet-stream"
+        rel="component"
+        artifact="nuget"
+        oneget:type="provider"
+        media="(OS:windows)"
+    />
+
+    <Link
+        href="https://go.microsoft.com/fwlink/?LinkId=404336"
+        type="application/octet-stream"
+        rel="component"
+        artifact="nuget"
+        oneget:type="provider"
+        media="(OS:windows)"
+    />
+</SoftwareIdentity>

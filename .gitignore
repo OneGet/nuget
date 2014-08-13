@@ -25,3 +25,5 @@ WebMatrixExtension/packages/*
 *.userprefs
 .DS_Store
 src/VsExtension/source.extension.vsixmanifest
+swidtags/*.exe
+swidtags/*.swidtag
