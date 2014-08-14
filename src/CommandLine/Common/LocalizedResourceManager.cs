@@ -15,11 +15,12 @@ namespace NuGet
                    _resourceManager.GetString(resourceName, CultureInfo.InvariantCulture);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "the convention is to used lower case letter for language name.")]        
+
         /// <summary>
         /// Returns the 3 letter language name used to locate localized resources.
         /// </summary>
         /// <returns>the 3 letter language name used to locate localized resources.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase", Justification = "the convention is to used lower case letter for language name.")]        
         public static string GetLanguageName()
         {
             var culture = Thread.CurrentThread.CurrentUICulture;

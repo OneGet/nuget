@@ -125,6 +125,7 @@ namespace NuGet
         /// <param name="fileSystem">The file system which contains the .nupkg file.</param>
         /// <param name="packagePath">The relative package path within the file system.</param>
         /// <param name="expandedFileSystem">The file system which should be used to store unzipped content files.</param>
+        /// <param name="forceUseCache"></param>
         /// <exception cref="System.ArgumentNullException">fileSystem</exception>
         /// <exception cref="System.ArgumentException">packagePath</exception>
         internal OptimizedZipPackage(IFileSystem fileSystem, string packagePath, IFileSystem expandedFileSystem, bool forceUseCache) :

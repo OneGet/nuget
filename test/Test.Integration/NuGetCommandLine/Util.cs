@@ -14,6 +14,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         /// <param name="packageId">The id of the created package.</param>
         /// <param name="version">The version of the created package.</param>
         /// <param name="path">The directory where the package is created.</param>
+        /// <param name="licenseUrl"></param>
         /// <returns>The full path of the created package file.</returns>
         public static string CreateTestPackage(string packageId, string version, string path, Uri licenseUrl = null)
         {
@@ -59,7 +60,7 @@ namespace NuGet.Test.Integration.NuGetCommandLine
         /// <summary>
         /// Deletes the specified directory.
         /// </summary>
-        /// <param name="packageDirectory">The directory to be deleted.</param>
+        /// <param name="directory">The directory to be deleted.</param>
         public static void DeleteDirectory(string directory)
         {
             if (Directory.Exists(directory))

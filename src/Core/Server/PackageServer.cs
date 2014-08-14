@@ -39,6 +39,7 @@ namespace NuGet
         /// </summary>
         /// <param name="apiKey">API key to be used to push the package.</param>
         /// <param name="package">The package to be pushed.</param>
+        /// <param name="packageSize"></param>
         /// <param name="timeout">Time in milliseconds to timeout the server request.</param>
         /// <param name="disableBuffering">Indicates if HttpWebRequest buffering should be disabled.</param>
         public void PushPackage(string apiKey, IPackage package, long packageSize, int timeout, bool disableBuffering) 
@@ -61,7 +62,7 @@ namespace NuGet
         /// </summary>
         /// <param name="apiKey">API key to be used to push the package.</param>
         /// <param name="packageStreamFactory">A delegate which can be used to open a stream for the package file.</param>
-        /// <param name="contentLength">Size of the package to be pushed.</param>
+        /// <param name="packageSize">Size of the package to be pushed.</param>
         /// <param name="timeout">Time in milliseconds to timeout the server request.</param>
         /// <param name="disableBuffering">Disable buffering.</param>
         private void PushPackageToServer(

@@ -404,6 +404,8 @@ namespace NuGet
         /// <param name="packages">Packages to look for updates</param>
         /// <param name="includePrerelease">Indicates whether to consider prerelease updates.</param>
         /// <param name="includeAllVersions">Indicates whether to include all versions of an update as opposed to only including the latest version.</param>
+        /// <param name="targetFrameworks"></param>
+        /// <param name="versionConstraints"></param>
         public static IEnumerable<IPackage> GetUpdates(
             this IPackageRepository repository,
             IEnumerable<IPackageName> packages,

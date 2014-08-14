@@ -4,19 +4,21 @@
     <CodeAnalysisRuleSet>..\..\NuGet.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis Condition="'$(EnableCodeAnalysis)'=='true'">true</RunCodeAnalysis>
     <NuGetPackageImportStamp>40699e50</NuGetPackageImportStamp>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\..\</SolutionDir>
+    <SolutionPath Condition="$(SolutionPath) == '' Or $(SolutionPath) == '*Undefined*'">$(SolutionDir)\OneGet.sln</SolutionPath>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
+  <Import Project="$(SolutionPath).props" Condition="Exists('$(SolutionPath).props')" />
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
   </PropertyGroup>
   <Import Project="..\..\Build\NuGet.Settings.targets" />
   <PropertyGroup>
@@ -42,6 +44,7 @@
     <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\WindowsPowerShell\v1.0\System.Management.Automation.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
@@ -232,18 +235,20 @@
     <Exec Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsANYCPU)" WorkingDirectory="$(OutputPath)" />
     <!-- produce another signed one if signing assembly -->
     <Exec Condition=" '$(SignASsembly)' == 'true' " Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsSignedANYCPU)" WorkingDirectory="$(OutputPath)" />
-    <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')"  Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)"/>
+    <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')" Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)" />
   </Target>
   <Target Name="AfterBuild">
     <CallTarget Targets="MergeExecutable" />
   </Target>
-  <Import Project="..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets" Condition="Exists('..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets')" />
+  <Import Project="..\..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets" Condition="Exists('..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Outercurve.MSBuildTasks.1.0.0.1\build\Outercurve.MSBuildTasks.targets'))" />
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
