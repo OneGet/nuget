@@ -1,7 +1,7 @@
 ## echo . # > nul & powershell invoke-expression (get-content -raw %~dpf0 %1 %2 %3 %4 %5 %6 %7 %8 %9) & goto :EOF
 ipmo coapp
 
-$file = "..\src\CommandLine\bin\release\Merged\NuGet-AnyCPU.exe"
+$file = "..\..\output\v40\AnyCPU\Release\bin\Merged\NuGet-AnyCPU.exe"
 $version = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo( $file ).FileVersion)
 
 # generate a swidtag
