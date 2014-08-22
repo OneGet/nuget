@@ -15,6 +15,7 @@
 namespace NuGet.OneGet{
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -61,18 +62,35 @@ namespace NuGet.OneGet{
             }
         }
 
+        /// <summary>
+        /// DEPRECATED -- for supporting the AUG 2014 OneGetPreview
+        /// </summary>
+        /// <param name="category"></param>
+        /// <param name="requestImpl"></param>
         public void GetDynamicOptions(int category, RequestImpl requestImpl) {
+            try {
+                GetDynamicOptions(((OptionCategory)category).ToString(), requestImpl);
+            } catch {
+                // meh. If it doesn't fit, move on.
+            }
+        }
+
+        public void GetDynamicOptions(string category, RequestImpl requestImpl) {
             using (var request =requestImpl.As<Request>()) {
                 try {
-                    var cat = (OptionCategory)category;
-                    request.Debug("Calling 'NuGet::GetDynamicOptions ({0})'", cat);
+                    request.Debug("Calling '{0}::GetDynamicOptions' '{1}'", "NuGet", category);
+
+                    OptionCategory cat;
+                    if (!Enum.TryParse(category ?? "", true, out cat)) {
+                        // unknown category
+                        return;
+                    }
 
                     switch (cat) {
                         case OptionCategory.Package:
                             request.YieldDynamicOption(cat, "Tag", OptionType.StringArray, false);
                             request.YieldDynamicOption(cat, "Contains", OptionType.String, false);
                             request.YieldDynamicOption(cat, "AllowPrereleaseVersions", OptionType.Switch, false);
-                            request.YieldDynamicOption(cat, "AllVersions", OptionType.Switch, false);
                             break;
 
                         case OptionCategory.Source:
@@ -198,22 +216,30 @@ namespace NuGet.OneGet{
         public void GetInstalledPackages(string name, RequestImpl requestImpl) {
             using (var request =requestImpl.As<Request>()) {
                 request.Debug("Calling 'NuGet::GetInstalledPackages'");
-                var nupkgs = Directory.EnumerateFileSystemEntries(request.Destination, "*.nupkg", SearchOption.AllDirectories);
 
-                foreach (var pkgFile in nupkgs) {
-                    var pkgItem = request.GetPackageByFilePath(pkgFile);
-                    if (pkgItem != null) {
-                        if (pkgItem.Id.Equals(name, StringComparison.CurrentCultureIgnoreCase)) {
-                            request.YieldPackage(pkgItem, name);
-                            break;
-                        }
-                        if (string.IsNullOrEmpty(name) || pkgItem.Id.IndexOf(name, StringComparison.CurrentCultureIgnoreCase) > -1) {
-                            if (!request.YieldPackage(pkgItem, name)) {
-                                return;
+                // look in the destination directory for directories that contain nupkg files.
+                var subdirs = Directory.EnumerateDirectories(request.Destination);
+                foreach (var subdir in subdirs) {
+                    var nupkgs = Directory.EnumerateFileSystemEntries(subdir, "*.nupkg", SearchOption.TopDirectoryOnly);
+
+                    foreach (var pkgFile in nupkgs) {
+                        var pkgItem = request.GetPackageByFilePath(pkgFile);
+
+                        if (pkgItem != null && pkgItem.IsInstalled) {
+
+                            if (pkgItem.Id.Equals(name, StringComparison.CurrentCultureIgnoreCase)) {
+                                request.YieldPackage(pkgItem, name);
+                                break;
+                            }
+                            if (string.IsNullOrEmpty(name) || pkgItem.Id.IndexOf(name, StringComparison.CurrentCultureIgnoreCase) > -1) {
+                                if (!request.YieldPackage(pkgItem, name)) {
+                                    return;
+                                }
                             }
                         }
                     }
                 }
+                
             }
         }
 
@@ -304,9 +330,10 @@ namespace NuGet.OneGet{
             using (var request =requestImpl.As<Request>()) {
                 request.Debug("Calling 'NuGet::UninstallPackage'");
                 var pkg = request.GetPackageByFastpath(fastPath);
+                var dir = pkg.InstalledDirectory;
 
-                if (Directory.Exists(pkg.FullPath)) {
-                    request.DeleteFolder(pkg.FullPath,request.RemoteThis);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir) ) {
+                    request.DeleteFolder(pkg.InstalledDirectory,request.RemoteThis);
                     request.YieldPackage(pkg, pkg.Id);
                 }
             }

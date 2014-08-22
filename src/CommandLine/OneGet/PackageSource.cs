@@ -13,6 +13,7 @@
 //  
 
 namespace NuGet.OneGet {
+    using System.IO;
     using global::NuGet;
 
     internal class PackageSource {
@@ -34,12 +35,27 @@ namespace NuGet.OneGet {
 
         internal bool IsSourceAFile {
             get {
+                try {
+                    if (!string.IsNullOrEmpty(Location) && File.Exists(Location)) {
+                        return true;
+                    }
+                } catch {
+                    // no worries.
+                }
                 return false;
             }
         }
 
         internal bool IsSourceADirectory {
             get {
+                try {
+                    if (!string.IsNullOrEmpty(Location) && Directory.Exists(Location)) {
+                        return true;
+                    }
+                }
+                catch {
+                    // no worries.
+                }
                 return false;
             }
         }

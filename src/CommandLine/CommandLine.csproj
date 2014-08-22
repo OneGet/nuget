@@ -236,6 +236,7 @@
     <!-- produce another signed one if signing assembly -->
     <Exec Condition=" '$(SignASsembly)' == 'true' " Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsSignedANYCPU)" WorkingDirectory="$(OutputPath)" />
     <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')" Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)" />
+    <Copy SourceFiles="$(ILMergeOutputFilePathANYCPU)" DestinationFiles="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe" /> 
   </Target>
   <Target Name="AfterBuild">
     <CallTarget Targets="MergeExecutable" />

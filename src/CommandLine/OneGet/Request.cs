@@ -58,6 +58,15 @@ namespace NuGet.OneGet {
         /// <returns></returns>
         public abstract Type GetIRequestInterface();
 
+        /// <summary>
+        /// Returns the internal version of the OneGet core.
+        /// 
+        /// This will usually only be updated if there is a breaking API or Interface change that might 
+        /// require other code to know which version is running.
+        /// </summary>
+        /// <returns>Internal Version of OneGet</returns>
+        public abstract int CoreVersion();
+
         public abstract bool NotifyBeforePackageInstall(string packageName, string version, string source, string destination);
 
         public abstract bool NotifyPackageInstalled(string packageName, string version, string source, string destination);
@@ -96,12 +105,24 @@ namespace NuGet.OneGet {
 
         public abstract bool CompleteProgress(int activityId, bool isSuccessful);
 
+        public abstract IEnumerable<string> GetOptionValues(string category, string key);
+
         /// <summary>
         ///     Used by a provider to request what metadata keys were passed from the user
+        ///
+        /// This is API is deprecated, use the string variant instead.
         /// </summary>
         /// <returns></returns>
         public abstract IEnumerable<string> GetOptionKeys(int category);
 
+        /// <summary>
+        /// 
+        /// 
+        /// This is API is deprecated, use the string variant instead.
+        /// </summary>
+        /// <param name="category"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public abstract IEnumerable<string> GetOptionValues(int category, string key);
 
         public abstract IEnumerable<string> GetSources();
@@ -110,7 +131,7 @@ namespace NuGet.OneGet {
 
         public abstract string GetCredentialPassword();
 
-        public abstract bool ShouldBootstrapProvider(string requestor, string providerName, string providerVersion, string providerType, string location, string destination );
+        public abstract bool ShouldBootstrapProvider(string requestor, string providerName, string providerVersion, string providerType, string location, string destination);
 
         public abstract bool ShouldContinueWithUntrustedPackageSource(string package, string packageSource);
 
@@ -229,6 +250,8 @@ namespace NuGet.OneGet {
         /// <returns></returns>
         public abstract bool YieldDynamicOption(int category, string name, int expectedType, bool isRequired);
 
+        public abstract bool YieldDynamicOption(string category, string name, string expectedType, bool isRequired);
+
         public abstract bool YieldKeyValuePair(string key, string value);
 
         public abstract bool YieldValue(string value);
@@ -282,7 +305,7 @@ namespace NuGet.OneGet {
             return Messages.ResourceManager.GetString(messageText);
         }
 
-        internal string FormatMessageString(string messageText, object[] args) {
+        internal string FormatMessageString(string messageText, params object[] args) {
             if (string.IsNullOrEmpty(messageText)) {
                 return string.Empty;
             }
@@ -344,6 +367,38 @@ namespace NuGet.OneGet {
             return RequestExtensions.Extend(this, GetIRequestInterface(), objects);
         }
 
+        internal string GetOptionValue(OptionCategory category, string name) {
+            // get the value from the request
+            if (CoreVersion() > 0) {
+                return (GetOptionValues(category.ToString(), name) ?? Enumerable.Empty<string>()).LastOrDefault();
+            }
+            return (GetOptionValues((int)category, name) ?? Enumerable.Empty<string>()).LastOrDefault();
+        }
+
+        internal IEnumerable<string> GetOptionValues(OptionCategory category, string name) {
+            // get the value from the request
+            if (CoreVersion() > 0) {
+                return (GetOptionValues(category.ToString(), name) ?? Enumerable.Empty<string>());
+            }
+            return (GetOptionValues((int)category, name) ?? Enumerable.Empty<string>());
+        }
+
+        public bool YieldDynamicOption(OptionCategory category, string name, OptionType expectedType, bool isRequired) {
+            if (CoreVersion() > 0) {
+                return YieldDynamicOption(category.ToString(), name, expectedType.ToString(), isRequired);
+            }
+
+            // Deprecated--August Preview build uses ints.
+            return YieldDynamicOption((int)category, name, (int)expectedType, isRequired);
+        }
+
+        public bool YieldDynamicOption(OptionCategory category, string name, OptionType expectedType, bool isRequired, IEnumerable<string> permittedValues) {
+            if (CoreVersion() > 0) {
+                return YieldDynamicOption(category.ToString(), name, expectedType.ToString(), isRequired) && (permittedValues ?? Enumerable.Empty<string>()).All(each => YieldKeyValuePair(name, each));
+            }
+            return YieldDynamicOption((int)category, name, (int)expectedType, isRequired) && (permittedValues ?? Enumerable.Empty<string>()).All(each => YieldKeyValuePair(name, each));
+        }
+
         #endregion
 
         private static readonly Regex _rxFastPath = new Regex(@"\$(?<source>[\w,\+,\/,=]*)\\(?<id>[\w,\+,\/,=]*)\\(?<version>[\w,\+,\/,=]*)");
@@ -355,7 +410,7 @@ namespace NuGet.OneGet {
             get {
                 if (string.IsNullOrEmpty(_configurationFileLocation)) {
                     // get the value from the request
-                    var path = GetValue(OptionCategory.Source, "ConfigFile");
+                    var path = GetOptionValue(OptionCategory.Source, "ConfigFile");
                     if (!string.IsNullOrEmpty(path)) {
                         return path;
                     }
@@ -369,61 +424,61 @@ namespace NuGet.OneGet {
 
         internal string[] Tag {
             get {
-                return GetValues(OptionCategory.Package, "Tag").ToArray();
+                return GetOptionValues(OptionCategory.Package, "Tag").ToArray();
             }
         }
 
         internal string Contains {
             get {
-                return GetValue(OptionCategory.Package, "Contains");
+                return GetOptionValue(OptionCategory.Package, "Contains");
             }
         }
 
         internal string Destination {
             get {
-                return Path.GetFullPath(GetValue(OptionCategory.Install, "Destination"));
+                return Path.GetFullPath(GetOptionValue(OptionCategory.Install, "Destination"));
             }
         }
 
         internal bool SkipValidate {
             get {
-                return GetValue(OptionCategory.Source, "SkipValidate").IsTrue();
+                return GetOptionValue(OptionCategory.Source, "SkipValidate").IsTrue();
             }
         }
 
         internal bool AllowPrereleaseVersions {
             get {
-                return GetValue(OptionCategory.Package, "AllowPrereleaseVersions").IsTrue();
+                return GetOptionValue(OptionCategory.Package, "AllowPrereleaseVersions").IsTrue();
             }
         }
 
         internal bool AllVersions {
             get {
-                return GetValue(OptionCategory.Package, "AllVersions").IsTrue();
+                return GetOptionValue(OptionCategory.Package, "AllVersions").IsTrue();
             }
         }
 
         internal bool SkipDependencies {
             get {
-                return GetValue(OptionCategory.Install, "SkipDependencies").IsTrue();
+                return GetOptionValue(OptionCategory.Install, "SkipDependencies").IsTrue();
             }
         }
 
         internal bool ContinueOnFailure {
             get {
-                return GetValue(OptionCategory.Install, "ContinueOnFailure").IsTrue();
+                return GetOptionValue(OptionCategory.Install, "ContinueOnFailure").IsTrue();
             }
         }
 
         internal bool ExcludeVersion {
             get {
-                return GetValue(OptionCategory.Install, "ExcludeVersion").IsTrue();
+                return GetOptionValue(OptionCategory.Install, "ExcludeVersion").IsTrue();
             }
         }
 
         internal string PackageSaveMode {
             get {
-                return GetValue(OptionCategory.Install, "PackageSaveMode");
+                return GetOptionValue(OptionCategory.Install, "PackageSaveMode");
             }
         }
 
@@ -575,24 +630,6 @@ namespace NuGet.OneGet {
                 return YieldKeyValuePair(pair.Key, null);
             }
             return pair.Value.All(each => YieldKeyValuePair(pair.Key, each));
-        }
-
-        public bool YieldDynamicOption(OptionCategory category, string name, OptionType expectedType, bool isRequired) {
-            return YieldDynamicOption((int)category, name, (int)expectedType, isRequired);
-        }
-
-        public bool YieldDynamicOption(OptionCategory category, string name, OptionType expectedType, bool isRequired, IEnumerable<string> permittedValues) {
-            return YieldDynamicOption((int)category, name, (int)expectedType, isRequired) && (permittedValues ?? Enumerable.Empty<string>()).All(each => YieldKeyValuePair(name, each));
-        }
-
-        private string GetValue(OptionCategory category, string name) {
-            // get the value from the request
-            return (GetOptionValues((int)category, name) ?? Enumerable.Empty<string>()).LastOrDefault();
-        }
-
-        private IEnumerable<string> GetValues(OptionCategory category, string name) {
-            // get the value from the request
-            return (GetOptionValues((int)category, name) ?? Enumerable.Empty<string>());
         }
 
         internal void RemovePackageSource(string id) {
@@ -848,7 +885,7 @@ namespace NuGet.OneGet {
                         return false;
                     }
                 }
-                
+
             }
             catch (Exception e) { 
                 e.Dump(this);
@@ -865,8 +902,13 @@ namespace NuGet.OneGet {
 
             foreach (var pkg in packageReferences) {
                 foundPackage = true;
-                if (!YieldPackage(pkg, searchKey)) {
-                    break;
+                try {
+                    if (!YieldPackage(pkg, searchKey)) {
+                        break;
+                    }
+                } catch (Exception e) {
+                    e.Dump(this);
+                    return false;
                 }
             }
             return foundPackage;
@@ -949,27 +991,29 @@ namespace NuGet.OneGet {
         }
 
         private IEnumerable<PackageItem> SearchSourceForPackages(PackageSource source, string name, string requiredVersion, string minimumVersion, string maximumVersion) {
-            if (!string.IsNullOrEmpty(name) && WildcardPattern.ContainsWildcardCharacters(name)) {
+            try {
+                if (!string.IsNullOrEmpty(name) && WildcardPattern.ContainsWildcardCharacters(name)) {
 
-                // NuGet does not support PowerShell/POSIX style wildcards and supports only '*' in searchTerm with NuGet.exe
-                // Replace the range from '[' - to ']' with * and ? with * then wildcard pattern is applied on the results from NuGet.exe
-                var tempName = name;
-                var squareBracketPattern = Regex.Escape("[") + "(.*?)]";
-                foreach (Match match in Regex.Matches(tempName, squareBracketPattern))
-                {
-                    tempName = tempName.Replace(match.Value, "*");
-                }
-                var searchTerm = tempName.Replace("?", "*");
+                    // NuGet does not support PowerShell/POSIX style wildcards and supports only '*' in searchTerm with NuGet.exe
+                    // Replace the range from '[' - to ']' with * and ? with * then wildcard pattern is applied on the results from NuGet.exe
+                    var tempName = name;
+                    var squareBracketPattern = Regex.Escape("[") + "(.*?)]";
+                    foreach (Match match in Regex.Matches(tempName, squareBracketPattern)) {
+                        tempName = tempName.Replace(match.Value, "*");
+                    }
+                    var searchTerm = tempName.Replace("?", "*");
 
-                // Wildcard pattern matching configuration.
-                const WildcardOptions wildcardOptions = WildcardOptions.CultureInvariant | WildcardOptions.IgnoreCase;
-                var wildcardPattern = new WildcardPattern(searchTerm, wildcardOptions);
+                    // Wildcard pattern matching configuration.
+                    const WildcardOptions wildcardOptions = WildcardOptions.CultureInvariant | WildcardOptions.IgnoreCase;
+                    var wildcardPattern = new WildcardPattern(searchTerm, wildcardOptions);
 
-                IEnumerable<string> packageIds = null;
-                using ( var p = AsyncProcess.Start(NuGetExePath, string.Format(@"list ""{0}"" -Source ""{1}"" ", searchTerm, source.Location))) {
-                        packageIds = p.StandardOutput.Where( each => !string.IsNullOrEmpty(each)).Select(l => {
+                    IEnumerable<string> packageIds = null;
+                    using (var p = AsyncProcess.Start(NuGetExePath, string.Format(@"list ""{0}"" -Source ""{1}"" ", searchTerm, source.Location))) {
+                        packageIds = p.StandardOutput.Where(each => !string.IsNullOrEmpty(each)).Select(l => {
                             Verbose("NuGet: {0}", l);
-                            if (l.Contains("No packages found.")) { return null; }
+                            if (l.Contains("No packages found.")) {
+                                return null;
+                            }
                             // ComicRack 0.9.162
                             var packageDetails = l.Split();
 
@@ -977,53 +1021,62 @@ namespace NuGet.OneGet {
                                 return packageDetails[0];
                             }
                             return null;
-                        }).Where( each => each != null).ToArray();
+                        }).Where(each => each != null).ToArray();
 
-                    foreach (var l in p.StandardError.Where(l => !string.IsNullOrEmpty(l))) {
-                        Warning("NuGet: {0}", l);
+                        foreach (var l in p.StandardError.Where(l => !string.IsNullOrEmpty(l))) {
+                            Warning("NuGet: {0}", l);
+                        }
                     }
+                    return FilterOnVersion(source.Repository.FindPackages(packageIds), requiredVersion, minimumVersion, maximumVersion)
+                        .Select(pkg => new PackageItem {
+                            Package = pkg,
+                            PackageSource = source,
+                            FastPath = MakeFastPath(source, pkg.Id, pkg.Version.ToString())
+                        });
                 }
-                return FilterOnVersion(source.Repository.FindPackages(packageIds), requiredVersion, minimumVersion, maximumVersion)
-                    .Select(pkg => new PackageItem {
+            } catch (Exception e) {
+                e.Dump(this);
+                return Enumerable.Empty<PackageItem>();
+            }
+
+            try { 
+                var criteria = Contains;
+                if (string.IsNullOrEmpty(criteria)) {
+                    criteria = name;
+                }
+                var packages = source.Repository.GetPackages().Find(criteria);
+
+                // why does this method return less results? It looks the same to me!?
+                // var packages = repository.Search(Hint.Is() ? Hint : name);
+
+                IEnumerable<IPackage> pkgs = null;
+
+                // query filtering:
+                if (!AllVersions && (string.IsNullOrEmpty(requiredVersion) && string.IsNullOrEmpty(minimumVersion) && string.IsNullOrEmpty(maximumVersion))) {
+                    pkgs = packages.FindLatestVersion();
+                }
+                else {
+                    // post-query filtering:
+                    pkgs = packages;
+                }
+
+                // if they passed a name, restrict the search things that actually contain the name in the FullName.
+                if (!string.IsNullOrEmpty(name)) {
+                    pkgs = FilterOnName(pkgs, name);
+                }
+
+                return FilterOnVersion(pkgs, requiredVersion, minimumVersion, maximumVersion)
+                    .Select(pkg => new PackageItem
+                    {
                         Package = pkg,
                         PackageSource = source,
                         FastPath = MakeFastPath(source, pkg.Id, pkg.Version.ToString())
                     });
             }
-
-            var criteria = Contains;
-            if (string.IsNullOrEmpty(criteria)) {
-                criteria = name;
+            catch (Exception e) {
+                e.Dump(this);
+                return Enumerable.Empty<PackageItem>();
             }
-            var packages = source.Repository.GetPackages().Find(criteria);
-
-            // why does this method return less results? It looks the same to me!?
-            // var packages = repository.Search(Hint.Is() ? Hint : name);
-
-            IEnumerable<IPackage> pkgs = null;
-
-            // query filtering:
-            if (!AllVersions && (string.IsNullOrEmpty(requiredVersion) && string.IsNullOrEmpty(minimumVersion) && string.IsNullOrEmpty(maximumVersion))) {
-                pkgs = packages.FindLatestVersion();
-            }
-            else {
-                // post-query filtering:
-                pkgs = packages;
-            }
-
-            // if they passed a name, restrict the search things that actually contain the name in the FullName.
-            if (!string.IsNullOrEmpty(name)) {
-                pkgs = FilterOnName(pkgs, name);
-            }
-
-            return FilterOnVersion(pkgs, requiredVersion, minimumVersion, maximumVersion)
-                .Select(pkg => new PackageItem
-                {
-                    Package = pkg,
-                    PackageSource = source,
-                    FastPath = MakeFastPath(source, pkg.Id, pkg.Version.ToString())
-                });
-            
         }
 
         public bool IsPackageInstalled(string name, string version) {

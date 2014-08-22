@@ -13,6 +13,7 @@
 //  
 
 namespace NuGet.OneGet {
+    using System;
     using System.IO;
     using global::NuGet;
 
@@ -36,6 +37,36 @@ namespace NuGet.OneGet {
             }
             set {
                 _id = value;
+            }
+        }
+
+        internal string InstalledDirectory {
+            get {
+                try {
+                    // if this package file is in a folder with the same name, 
+                    // we'll consider that 'installed'
+                    if (IsPackageFile) {
+                        var dir = Path.GetDirectoryName(PackageSource.Location);
+                        if (!string.IsNullOrEmpty(dir)) {
+
+                            var dirName = Path.GetFileName(dir);
+
+                            var name = Path.GetFileNameWithoutExtension(PackageSource.Location);
+                            if (!string.IsNullOrEmpty(name) && name.Equals(dirName, StringComparison.OrdinalIgnoreCase) && Directory.Exists(dir)) {
+                                return dir;
+                            }
+                        }
+                    }
+                } catch {
+                    
+                }
+                return null;
+            }
+        }
+
+        internal bool IsInstalled {
+            get {
+                return !string.IsNullOrEmpty(InstalledDirectory);
             }
         }
 

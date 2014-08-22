@@ -312,6 +312,9 @@ namespace NuGet.OneGet {
             startInfo.RedirectStandardError = true;
             startInfo.RedirectStandardOutput = true;
             startInfo.UseShellExecute = false;
+            startInfo.CreateNoWindow = true;
+            startInfo.WindowStyle= ProcessWindowStyle.Hidden;
+
             bool redirecting = true;
 
             //if (AdminPrivilege.IsElevated) {

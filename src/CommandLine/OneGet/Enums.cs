@@ -17,7 +17,7 @@ namespace NuGet.OneGet {
     #region copy PackageProvider-types
 /* Synced/Generated code =================================================== */
 
-public enum OptionCategory {
+    public enum OptionCategory {
         Package = 0,
         Provider = 1,
         Source = 2,
