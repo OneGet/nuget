@@ -28,3 +28,4 @@ src/VsExtension/source.extension.vsixmanifest
 swidtags/*.exe
 swidtags/*.swidtag
 src/CommandLine/outercurve_sign.msbuild
+pingme.txt
