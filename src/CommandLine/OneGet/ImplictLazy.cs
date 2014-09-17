@@ -14,15 +14,13 @@
 
 namespace NuGet.OneGet {
     using System;
-    using System.Runtime.InteropServices;
-    using System.Text;
 
-    public static class NativeMethods {
-        [DllImport("mpr.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        internal static extern int WNetGetConnection([MarshalAs(UnmanagedType.LPTStr)] string localName, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder remoteName, ref int length);
+    public class ImplictLazy<T> : Lazy<T> {
+        public ImplictLazy(Func<T> initializer) : base(initializer) {
+        }
 
-
-        [DllImport("user32.dll")]
-        internal static extern IntPtr SendMessageTimeout(Int32 hwnd, Int32 msg, Int32 wparam, [MarshalAs(UnmanagedType.LPStr)] string lparam, Int32 fuFlags, Int32 timeout, IntPtr result);
+        public static implicit operator T(ImplictLazy<T> lazy) {
+            return lazy.Value;
+        }
     }
 }

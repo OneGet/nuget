@@ -102,7 +102,7 @@ namespace NuGet.OneGet {
             }
         }
 
-        public static void Dump(this Exception e, Request request) {
+        public static void Dump(this Exception e, BaseRequest request) {
             var text = string.Format("{0}//{1}/{2}\r\n{3}", AppDomain.CurrentDomain.FriendlyName, e.GetType().Name, e.Message, e.StackTrace);
             request.Verbose("Exception : {0}", text);
         }

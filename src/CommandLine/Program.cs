@@ -10,6 +10,8 @@ using NuGet.Common;
 
 namespace NuGet
 {
+    using OneGet;
+
     public class Program
     {
         private const string NuGetExtensionsKey = "NUGET_EXTENSIONS_PATH";
@@ -33,6 +35,13 @@ namespace NuGet
         {
             DebugHelper.WaitForAttach(ref args);
 
+            // if this is a chocolatey RPC instance, we'll let it do the real work instead.
+            for(var i =0; i< args.Length ; i++) {
+                if (String.Equals(args[i], "-rpc", StringComparison.OrdinalIgnoreCase)) {
+                    return ChocolateyRequest.InvokeChocolateyScriptForRPC(args[i + 1], args.Last());
+                }
+            }
+            
             // This is to avoid applying weak event pattern usage, which breaks under Mono or restricted environments, e.g. Windows Azure Web Sites.
             EnvironmentUtility.SetRunningFromCommandLine();
 

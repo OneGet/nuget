@@ -24,11 +24,10 @@ namespace NuGet.OneGet {
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
-    using System.Xml.XPath;
     using global::NuGet;
     using RequestImpl = System.MarshalByRefObject;
 
-    public abstract class Request : IDisposable {
+    public abstract class BaseRequest : IDisposable {
         #region copy core-apis
 
         /* Synced/Generated code =================================================== */
@@ -152,40 +151,6 @@ namespace NuGet.OneGet {
         public abstract bool IsInteractive();
 
         public abstract int CallCount();
-        #endregion
-
-        #region copy service-apis
-
-        /* Synced/Generated code =================================================== */
-        public abstract void DownloadFile(Uri remoteLocation, string localFilename, RequestImpl requestImpl);
-
-        public abstract bool IsSupportedArchive(string localFilename, RequestImpl requestImpl);
-
-        public abstract IEnumerable<string> UnpackArchive(string localFilename, string destinationFolder, RequestImpl requestImpl);
-
-        public abstract void AddPinnedItemToTaskbar(string item, RequestImpl requestImpl);
-
-        public abstract void RemovePinnedItemFromTaskbar(string item, RequestImpl requestImpl);
-
-        public abstract void CreateShortcutLink(string linkPath, string targetPath, string description, string workingDirectory, string arguments, RequestImpl requestImpl);
-
-        public abstract void SetEnvironmentVariable(string variable, string value, int context, RequestImpl requestImpl);
-
-        public abstract void RemoveEnvironmentVariable(string variable, int context, RequestImpl requestImpl);
-
-        public abstract void CopyFile(string sourcePath, string destinationPath, RequestImpl requestImpl);
-
-        public abstract void Delete(string path, RequestImpl requestImpl);
-
-        public abstract void DeleteFolder(string folder, RequestImpl requestImpl);
-
-        public abstract void CreateFolder(string folder, RequestImpl requestImpl);
-
-        public abstract void DeleteFile(string filename, RequestImpl requestImpl);
-
-        public abstract string GetKnownFolder(string knownFolder, RequestImpl requestImpl);
-
-        public abstract bool IsElevated(RequestImpl requestImpl);
         #endregion
 
         #region copy response-apis
@@ -349,11 +314,11 @@ namespace NuGet.OneGet {
 
         }
 
-        public static implicit operator MarshalByRefObject(Request req) {
+        public static implicit operator MarshalByRefObject(BaseRequest req) {
             return req.RemoteThis;
         }
 
-        public static MarshalByRefObject ToMarshalByRefObject(Request request) {
+        public static MarshalByRefObject ToMarshalByRefObject(BaseRequest request) {
             return request.RemoteThis;
         }
 
@@ -404,23 +369,9 @@ namespace NuGet.OneGet {
         private static readonly Regex _rxFastPath = new Regex(@"\$(?<source>[\w,\+,\/,=]*)\\(?<id>[\w,\+,\/,=]*)\\(?<version>[\w,\+,\/,=]*)");
         private static readonly Regex _rxPkgParse = new Regex(@"'(?<pkgId>\S*)\s(?<ver>.*?)'");
 
-        private string _configurationFileLocation;
+        protected string _configurationFileLocation;
 
-        internal string ConfigurationFileLocation {
-            get {
-                if (string.IsNullOrEmpty(_configurationFileLocation)) {
-                    // get the value from the request
-                    var path = GetOptionValue(OptionCategory.Source, "ConfigFile");
-                    if (!string.IsNullOrEmpty(path)) {
-                        return path;
-                    }
-
-                    //otherwise, use %APPDATA%/NuGet/NuGet.Config
-                    _configurationFileLocation = Path.Combine(GetKnownFolder("ApplicationData", RemoteThis), "NuGet", "NuGet.config");
-                }
-                return _configurationFileLocation;
-            }
-        }
+        protected abstract string ConfigurationFileLocation {get;}
 
         internal string[] Tag {
             get {
@@ -431,12 +382,6 @@ namespace NuGet.OneGet {
         internal string Contains {
             get {
                 return GetOptionValue(OptionCategory.Package, "Contains");
-            }
-        }
-
-        internal string Destination {
-            get {
-                return Path.GetFullPath(GetOptionValue(OptionCategory.Install, "Destination"));
             }
         }
 
@@ -482,59 +427,9 @@ namespace NuGet.OneGet {
             }
         }
 
-        internal XDocument Config {
-            get {
-                try {
-                    var doc = XDocument.Load(ConfigurationFileLocation);
-                    if (doc.Root != null && doc.Root.Name == "configuration") {
-                        return doc;
-                    }
-                    // doc root isn't right. make a new one!
-                } catch {
-                    // a bad xml doc.
-                }
-                return XDocument.Load(new MemoryStream(Encoding.UTF8.GetBytes(Constants.DefaultConfig)));
-            }
-            set {
-                if (value == null) {
-                    return;
-                }
+        internal abstract string Destination {get;}
 
-                Verbose("Saving NuGet Config {0}", ConfigurationFileLocation);
-
-                CreateFolder(Path.GetDirectoryName(ConfigurationFileLocation), RemoteThis);
-                value.Save(ConfigurationFileLocation);
-            }
-        }
-
-        internal IDictionary<string, PackageSource> RegisteredPackageSources {
-            get {
-                try {
-                    return Config.XPathSelectElements("/configuration/packageSources/add")
-                        .Where(each => each.Attribute("key") != null && each.Attribute("value") != null)
-                        .ToDictionaryNicely(each => each.Attribute("key").Value, each => new PackageSource {
-                            Name = each.Attribute("key").Value,
-                            Location = each.Attribute("value").Value,
-                            Trusted = each.Attributes("trusted").Any() && each.Attribute("trusted").Value.IsTrue(),
-                            IsRegistered = true,
-                            IsValidated = each.Attributes("validated").Any() && each.Attribute("validated").Value.IsTrue(),
-                        }, StringComparer.OrdinalIgnoreCase);
-                } catch (Exception e) {
-                    e.Dump(this);
-                }
-                return new Dictionary<string, PackageSource>(StringComparer.OrdinalIgnoreCase) {
-                    {
-                        "nuget.org", new PackageSource {
-                            Name = "nuget.org",
-                            Location = "https://www.nuget.org/api/v2/",
-                            Trusted = false,
-                            IsRegistered = false,
-                            IsValidated = true,
-                        }
-                    }
-                };
-            }
-        }
+        internal abstract IDictionary<string, PackageSource> RegisteredPackageSources {get;}
 
         internal IEnumerable<PackageSource> SelectedSources {
             get {
@@ -619,7 +514,7 @@ namespace NuGet.OneGet {
             }
         }
 
-        private static string NuGetExePath {
+        internal static string NuGetExePath {
             get {
                 return typeof (AggregateRepository).Assembly.Location;
             }
@@ -632,37 +527,9 @@ namespace NuGet.OneGet {
             return pair.Value.All(each => YieldKeyValuePair(pair.Key, each));
         }
 
-        internal void RemovePackageSource(string id) {
-            var config = Config;
-            var source = config.XPathSelectElements(string.Format("/configuration/packageSources/add[@key='{0}']", id)).FirstOrDefault();
-            if (source != null) {
-                source.Remove();
-                Config = config;
-            }
-        }
+        internal abstract void RemovePackageSource(string id);
 
-        internal void AddPackageSource(string name, string location, bool isTrusted, bool isValidated) {
-            if (SkipValidate || ValidateSourceLocation(location)) {
-                var config = Config;
-                var sources = config.XPathSelectElements("/configuration/packageSources").FirstOrDefault();
-                if (sources == null) {
-                    config.Root.Add(sources = new XElement("packageSources"));
-                }
-                var source = new XElement("add");
-                source.SetAttributeValue("key", name);
-                source.SetAttributeValue("value", location);
-                if (isValidated) {
-                    source.SetAttributeValue("validated", true);
-                }
-                if (isTrusted) {
-                    source.SetAttributeValue("trusted", true);
-                }
-                sources.Add(source);
-                Config = config;
-
-                YieldPackageSource(name, location, isTrusted, true, isValidated);
-            }
-        }
+        internal abstract void AddPackageSource(string name, string location, bool isTrusted, bool isValidated);
 
         private bool  LocationCloseEnoughMatch(string givenLocation, string knownLocation) {
             if (givenLocation.Equals(knownLocation, StringComparison.OrdinalIgnoreCase)) {
@@ -1209,10 +1076,23 @@ namespace NuGet.OneGet {
             }).OrderByDescending(each => each.Package.Version);
         }
 
+        internal virtual void PreInstall(PackageItem packageItem) {
+        }
+
+        internal virtual void PostInstall(PackageItem packageItem) {
+        }
+
+        internal virtual void PreUninstall(PackageItem packageItem) {
+        }
+
+        internal virtual void PostUninstall(PackageItem packageItem) {
+        }
+
         internal bool InstallSinglePackage(PackageItem packageItem) {
             if (ShouldProcessPackageInstall(packageItem.Id, packageItem.Version, packageItem.PackageSource.Name)) {
                 // Get NuGet to install the Package
-
+                
+                PreInstall(packageItem);
                 var results = NuGetInstall(packageItem);
 
                 if (results.Status == InstallStatus.Successful) {
@@ -1223,6 +1103,10 @@ namespace NuGet.OneGet {
                             // todo: we should probablty uninstall this package unless the user said leave broken stuff behind
                             return false;
                         }
+
+                        // run any extra steps 
+                        PostInstall(installedPackage);
+
                         YieldPackage(packageItem, packageItem.PackageSource.Name);
                         // yay!
                     }
@@ -1234,9 +1118,32 @@ namespace NuGet.OneGet {
                     Verbose("Skipped Package '{0} v{1}' already installed", packageItem.Id, packageItem.Version);
                     return true;
                 }
+
                 Error(ErrorCategory.InvalidResult, packageItem.GetCanonicalId(this), Constants.MultiplePackagesInstalledExpectedOne, packageItem.GetCanonicalId(this));
             }
             return false;
+        }
+
+        public bool IsReady(bool b) {
+            return true;
+        }
+
+        private ProviderServicesApi _providerServices;
+        public ProviderServicesApi ProviderServices {
+            get {
+                return _providerServices ?? (_providerServices = GetPackageManagementService(RemoteThis).As<PMS>().ProviderServices.As<ProviderServicesApi>());
+            }
+        }
+
+        internal void UninstallPackage(PackageItem pkg) {
+            var dir = pkg.InstalledDirectory;
+
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) {
+                PreUninstall(pkg);
+                ProviderServices.DeleteFolder(pkg.InstalledDirectory, RemoteThis);
+                YieldPackage(pkg, pkg.Id);
+                PostUninstall(pkg);
+            }
         }
     }
 
@@ -1250,4 +1157,11 @@ namespace NuGet.OneGet {
     internal class InstallResult : Dictionary<InstallStatus, List<PackageItem>> {
         internal InstallStatus Status = InstallStatus.Unknown;
     }
+
+    public interface PMS {
+        object ProviderServices {get;}
+    }
+
+
 }
+
