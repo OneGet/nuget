@@ -19,24 +19,17 @@ namespace NuGet.OneGet {
     using System.Linq;
     using System.Reflection;
     using global::NuGet;
+    using global::OneGet.ProviderSDK;
     using RequestImpl = System.Object;
 
     public class NuGetProvider : CommonProvider<NuGetRequest> {
         static NuGetProvider() {
             _features = new Dictionary<string, string[]> {
-                {
-                    "supports-powershell-modules", _empty
-                }, {
-                    "schemes", new[] {
-                        "http", "https", "file"
-                    }
-                }, {
-                    "extensions", new[] {
-                        "nupkg"
-                    }
-                }, {
-                    "magic-signatures", _empty
-                },
+                { "supports-powershell-modules", _empty },
+                { "schemes", new[] { "http", "https", "file" }
+                }, { "extensions", new[] { "nupkg" }
+                }, { "magic-signatures", _empty },
+                { global::OneGet.ProviderSDK.Constants.Features.AutomationOnly, _empty }
             };
         }
 
@@ -58,30 +51,24 @@ namespace NuGet.OneGet {
                 try {
                     request.Debug("Calling '{0}::GetDynamicOptions' '{1}'", "NuGet", category);
 
-                    OptionCategory cat;
-                    if (!Enum.TryParse(category ?? "", true, out cat)) {
-                        // unknown category
-                        return;
-                    }
-
-                    switch (cat) {
-                        case OptionCategory.Package:
-                            request.YieldDynamicOption(cat, "Tag", OptionType.StringArray, false);
-                            request.YieldDynamicOption(cat, "Contains", OptionType.String, false);
-                            request.YieldDynamicOption(cat, "AllowPrereleaseVersions", OptionType.Switch, false);
+                    switch((category??string.Empty).ToLowerInvariant()){
+                        case "package":
+                            request.YieldDynamicOption("Tag", global::OneGet.ProviderSDK.Constants.OptionType.StringArray, false);
+                            request.YieldDynamicOption("Contains", global::OneGet.ProviderSDK.Constants.OptionType.String, false);
+                            request.YieldDynamicOption("AllowPrereleaseVersions", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
                             break;
 
-                        case OptionCategory.Source:
-                            request.YieldDynamicOption(cat, "ConfigFile", OptionType.String, false);
-                            request.YieldDynamicOption(cat, "SkipValidate", OptionType.Switch, false);
+                        case "source":
+                            request.YieldDynamicOption("ConfigFile", global::OneGet.ProviderSDK.Constants.OptionType.String, false);
+                            request.YieldDynamicOption("SkipValidate", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
                             break;
 
-                        case OptionCategory.Install:
-                            request.YieldDynamicOption(cat, "Destination", OptionType.Path, true);
-                            request.YieldDynamicOption(cat, "SkipDependencies", OptionType.Switch, false);
-                            request.YieldDynamicOption(cat, "ContinueOnFailure", OptionType.Switch, false);
-                            request.YieldDynamicOption(cat, "ExcludeVersion", OptionType.Switch, false);
-                            request.YieldDynamicOption(cat, "PackageSaveMode", OptionType.String, false, new[] {
+                        case "install":
+                            request.YieldDynamicOption("Destination", global::OneGet.ProviderSDK.Constants.OptionType.Path, true);
+                            request.YieldDynamicOption("SkipDependencies", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("ContinueOnFailure", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("ExcludeVersion", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("PackageSaveMode", global::OneGet.ProviderSDK.Constants.OptionType.String, false, new[] {
                                 "nuspec", "nupkg", "nuspec;nupkg"
                             });
                             break;

@@ -19,6 +19,7 @@ namespace NuGet.OneGet {
     using System.IO;
     using System.Linq;
     using RequestImpl = System.Object;
+    using global::OneGet.ProviderSDK;
 
     public abstract class CommonProvider<T> where T : BaseRequest {
         protected static readonly string[] _empty = new string[0];
@@ -100,20 +101,6 @@ namespace NuGet.OneGet {
         }
 
         /// <summary>
-        /// DEPRECATED -- for supporting the AUG 2014 OneGetPreview
-        /// </summary>
-        /// <param name="category"></param>
-        /// <param name="requestImpl"></param>
-        public void GetDynamicOptions(int category, RequestImpl requestImpl) {
-            try {
-                GetDynamicOptions(((OptionCategory)category).ToString(), requestImpl);
-            }
-            catch {
-                // meh. If it doesn't fit, move on.
-            }
-        }
-
-        /// <summary>
         /// Returns dynamic option definitions to the HOST
         /// </summary>
         /// <param name="category">The category of dynamic options that the HOST is interested in</param>
@@ -147,19 +134,19 @@ namespace NuGet.OneGet {
 
                     // let's make sure that they've given us everything we need.
                     if (string.IsNullOrEmpty(name)) {
-                        request.Error(ErrorCategory.InvalidArgument, Constants.NameParameter, Constants.MissingRequiredParameter, Constants.NameParameter);
+                        request.Error(ErrorCategory.InvalidArgument, Constants.Parameters.Name, Constants.Messages.MissingRequiredParameter, Constants.Parameters.Name);
                         // we're done here.
                         return;
                     }
 
                     if (string.IsNullOrEmpty(location)) {
-                        request.Error(ErrorCategory.InvalidArgument, Constants.LocationParameter, Constants.MissingRequiredParameter, Constants.LocationParameter);
+                        request.Error(ErrorCategory.InvalidArgument, Constants.Parameters.Location, Constants.Messages.MissingRequiredParameter, Constants.Parameters.Location);
                         // we're done here.
                         return;
                     }
 
                     // if this is supposed to be an update, there will be a dynamic parameter set for IsUpdatePackageSource
-                    var isUpdate = request.GetOptionValue(OptionCategory.Source, Constants.IsUpdateParameter).IsTrue();
+                    var isUpdate = request.GetOptionValue(Constants.Parameters.IsUpdate).IsTrue();
 
                     // if your source supports credentials you get get them too:
                     // string username =request.Username; 
@@ -173,7 +160,7 @@ namespace NuGet.OneGet {
 
                     if (src != null && !isUpdate) {
                         // tell the user that there's one here already
-                        request.Error(ErrorCategory.InvalidArgument, name ?? location, Constants.PackageProviderExists, name ?? location);
+                        request.Error(ErrorCategory.InvalidArgument, name ?? location, Constants.Messages.PackageProviderExists, name ?? location);
                         // we're done here.
                         return;
                     }
@@ -181,7 +168,7 @@ namespace NuGet.OneGet {
                     // conversely, if it didn't find one, and it is an update, that's bad too:
                     if (src == null && isUpdate) {
                         // you can't find that package source? Tell that to the user
-                        request.Error(ErrorCategory.ObjectNotFound, name ?? location, Constants.UnableToResolveSource, name ?? location);
+                        request.Error(ErrorCategory.ObjectNotFound, name ?? location, Constants.Messages.UnableToResolveSource, name ?? location);
                         // we're done here.
                         return;
                     }
@@ -198,7 +185,7 @@ namespace NuGet.OneGet {
                         validated = request.ValidateSourceLocation(location);
 
                         if (validated) {
-                            request.Error(ErrorCategory.InvalidData, name ?? location, Constants.SourceLocationNotValid, location);
+                            request.Error(ErrorCategory.InvalidData, name ?? location, Constants.Messages.SourceLocationNotValid, location);
                             // we're done here.
                             return;
                         }
@@ -250,7 +237,7 @@ namespace NuGet.OneGet {
 
                     var src = request.FindRegisteredSource(name);
                     if (src == null) {
-                        request.Warning(Constants.UnableToResolveSource, name);
+                        request.Warning(Constants.Messages.UnableToResolveSource, name);
                         return;
                     }
 
@@ -359,7 +346,7 @@ namespace NuGet.OneGet {
 
                     var pkgRef = request.GetPackageByFastpath(fastPackageReference);
                     if (pkgRef == null) {
-                        request.Error(ErrorCategory.InvalidArgument, fastPackageReference, Constants.UnableToResolvePackageReference);
+                        request.Error(ErrorCategory.InvalidArgument, fastPackageReference, Constants.Messages.UnableToResolvePackage);
                         return;
                     }
 
@@ -367,7 +354,7 @@ namespace NuGet.OneGet {
 
                     foreach (var d in dependencies) {
                         if (!request.InstallSinglePackage(d)) {
-                            request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.DependentPackageFailedInstall, d.GetCanonicalId(request));
+                            request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.Messages.DependentPackageFailedInstall, d.GetCanonicalId(request));
                             return;
                         }
                     }
@@ -377,7 +364,7 @@ namespace NuGet.OneGet {
                         // package itself didn't install.
                         // roll that back out everything we did install.
                         // and get out of here.
-                        request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.PackageFailedInstall, pkgRef.GetCanonicalId(request), Constants.ReasonUnknown);
+                        request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.Messages.PackageFailedInstall, pkgRef.GetCanonicalId(request));
 
                     }
                 }
@@ -442,7 +429,7 @@ namespace NuGet.OneGet {
 
                     var pkgRef = request.GetPackageByFastpath(fastPackageReference);
                     if (pkgRef == null) {
-                        request.Error(ErrorCategory.InvalidArgument, fastPackageReference, Constants.UnableToResolvePackageReference);
+                        request.Error(ErrorCategory.InvalidArgument, fastPackageReference, Constants.Messages.UnableToResolvePackage);
                         return;
                     }
 
@@ -484,7 +471,7 @@ namespace NuGet.OneGet {
 
                     var pkgRef = request.GetPackageByFastpath(fastPackageReference);
                     if (pkgRef == null) {
-                        request.Error(ErrorCategory.InvalidArgument, fastPackageReference, Constants.UnableToResolvePackageReference);
+                        request.Error(ErrorCategory.InvalidArgument, fastPackageReference, Constants.Messages.UnableToResolvePackage);
                         return;
                     }
 
@@ -492,7 +479,7 @@ namespace NuGet.OneGet {
                         foreach (var dep in depSet.Dependencies) {
                             var depRefs = dep.VersionSpec == null ? request.GetPackageById(dep.Id).ToArray() : request.GetPackageByIdAndVersionSpec(dep.Id, dep.VersionSpec, true).ToArray();
                             if (depRefs.Length == 0) {
-                                request.ThrowError(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.DependencyResolutionError, request.GetCanonicalPackageId(Constants.ProviderName, dep.Id, ((object)dep.VersionSpec ?? "").ToString()));
+                                request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.Messages.DependencyResolutionError, request.GetCanonicalPackageId(ProviderName, dep.Id, ((object)dep.VersionSpec ?? "").ToString()));
                             }
                             foreach (var dependencyReference in depRefs) {
                                 request.YieldPackage(dependencyReference, pkgRef.Id);

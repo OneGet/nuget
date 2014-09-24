@@ -18,6 +18,7 @@ namespace NuGet.OneGet {
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using global::OneGet.ProviderSDK;
 
     /// <summary>
     /// Chocolatey Package provider for OneGet.
@@ -97,28 +98,21 @@ namespace NuGet.OneGet {
                         return;
                     }
 
-
-                    OptionCategory cat;
-                    if (!Enum.TryParse(category ?? "", true, out cat)) {
-                        // unknown category
-                        return;
-                    }
-
-                    switch (cat) {
-                        case OptionCategory.Install:
+                    switch((category??string.Empty).ToLowerInvariant()){
+                        case "install":
                             // options required for install/uninstall/getinstalledpackages
                             break;
 
-                        case OptionCategory.Provider:
+                        case "provider":
                             // options used with this provider. Not currently used.
                             break;
 
-                        case OptionCategory.Source:
+                        case "source":
                             // options for package sources
                             
                             break;
 
-                        case OptionCategory.Package:
+                        case "package":
                             // options used when searching for packages 
                             break;
                     }

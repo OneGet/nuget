@@ -14,6 +14,7 @@
 
 namespace NuGet.OneGet {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
@@ -23,12 +24,22 @@ namespace NuGet.OneGet {
     using System.Runtime.Remoting;
     using System.Runtime.Remoting.Channels;
     using System.Runtime.Remoting.Channels.Ipc;
+    using System.Security.AccessControl;
     using System.Security.Principal;
     using System.Xml.Linq;
     using System.Xml.XPath;
+    using global::OneGet.ProviderSDK;
     using Microsoft.Win32;
 
+    public interface IChocolateyRequest {
+        
+    }
+
     public abstract class ChocolateyRequest : BaseRequest {
+
+        public override string ProviderName { get {
+            return "Chocolatey";
+        } }
 
         internal static ImplictLazy<string> ChocolateyModuleFolder = new ImplictLazy<string>( () => Path.GetFullPath(Assembly.GetExecutingAssembly().Location));
         internal static ImplictLazy<string> ChocolateyModuleFile = new ImplictLazy<string>(() => Path.Combine(ChocolateyModuleFolder, "Chocolatey.psd1"));
@@ -79,7 +90,7 @@ namespace NuGet.OneGet {
         internal bool ForceX86 {
             [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
             get {
-                return GetOptionValue(OptionCategory.Install, "Destination").IsTrue();
+                return GetOptionValue("ForceX86").IsTrue();
             }
         }
 
@@ -92,7 +103,7 @@ namespace NuGet.OneGet {
 
         internal override string Destination {
             get {
-                return RootInstallationPath;
+                return PackageInstallationPath;
             }
         }
 
@@ -183,7 +194,17 @@ namespace NuGet.OneGet {
                 // break;
                 // Now for the script.
                 // InvokeChocolateyScript(pkgPath, packageImte., script);
+
+
+                Environment.SetEnvironmentVariable("chocolateyPackageFolder", pkgPath);
+                Environment.SetEnvironmentVariable("chocolateyInstallArguments", "");
+                Environment.SetEnvironmentVariable("chocolateyInstallOverride", "");
+
                 InvokeChocolateyScript(script, pkgPath);
+
+                Environment.SetEnvironmentVariable("chocolateyPackageFolder", null);
+                Environment.SetEnvironmentVariable("chocolateyInstallArguments", null);
+                Environment.SetEnvironmentVariable("chocolateyInstallOverride", null);
             }
 
             // Now handle 'bins'
@@ -233,7 +254,7 @@ namespace NuGet.OneGet {
                     return;
                 }
 
-                ProviderServices.CreateFolder(Path.GetDirectoryName(ChocolateyConfigPath), this);
+                ProviderServices.CreateFolder(Path.GetDirectoryName(ChocolateyConfigPath), this.REQ);
                 value.Save(ChocolateyConfigPath);
             }
         }
@@ -262,10 +283,23 @@ namespace NuGet.OneGet {
 
         internal static int InvokeChocolateyScriptForRPC(string remoteUri, string script) {
             // connect to the server process first
-            var clientChannel = new IpcClientChannel();
+            var properties = new Hashtable();
+            properties.Add("portName", "Chocolatey");
+            properties.Add("authorizedGroup", "Everyone");
+            properties.Add("secure", "false");
+            properties.Add("exclusiveAddressUse", "true");
+            properties.Add("strictBinding", "false");
+            properties.Add("name", "ChocolateyRequest");
+            properties.Add("includeVersions", "false");
+
+            var clientChannel = new IpcClientChannel(properties,new BinaryClientFormatterSinkProvider(properties,null));
             ChannelServices.RegisterChannel(clientChannel, true);
-            var req = (ChocolateyRequest)Activator.GetObject(typeof(ChocolateyRequest), remoteUri);
-            ChocolateyScript.Invoke(req,script.FromBase64());
+            
+            var req=(Request)RemotingServices.Connect(typeof (Request), remoteUri, null);
+            Debugger.Launch();
+
+            req.Debug("See, it does work {0} {1} {2}", "A", "B", "C");
+            // ChocolateyScript.Invoke(req,script.FromBase64());
             return 0;
         }
 
@@ -278,18 +312,34 @@ namespace NuGet.OneGet {
         /// <returns></returns>
         internal int InvokeElevatedViaRPC(string script) {
 
+            // start new host process, create 
+
+
             var guid = Guid.NewGuid();
 
-            // set up the server IPC channel
-            var serverChannel = new IpcServerChannel(guid.ToString());
-            ChannelServices.RegisterChannel(serverChannel, true);
-            // RemotingConfiguration.RegisterWellKnownServiceType( typeof(BaseRequest), "Request", WellKnownObjectMode.Singleton);
-            var objRef = RemotingServices.Marshal(this);
+            var properties = new Hashtable();
+            properties.Add("portName","Chocolatey");
+            properties.Add("authorizedGroup", "Everyone");
+            properties.Add("secure", "false");
+            properties.Add("exclusiveAddressUse", "true");
+            properties.Add("strictBinding", "false");
+            properties.Add("name", "ChocolateyRequest");
+            properties.Add("includeVersions", "false");
 
+            // set up the server IPC channel
+            var serverChannel = new IpcServerChannel(properties, new BinaryServerFormatterSinkProvider(properties,null));
+            
+            ChannelServices.RegisterChannel(serverChannel, true);
+            // var instance = new DebTest(this);
+            var instance = this;
+            var objRef = RemotingServices.Marshal(instance, "Request",typeof(Request));
+
+            var remoteUris = serverChannel.GetUrlsForUri("Request");
+            var uri = remoteUris[0];
             // Create the client elevated
             var process = AsyncProcess.Start(new ProcessStartInfo {
                 FileName = NuGetExePath,
-                Arguments = string.Format("-rpc {0} -script {1}", objRef.URI, script.ToBase64()),
+                Arguments = string.Format("-rpc {0} -script {1}", uri, script.ToBase64()),
                 // WorkingDirectory = workingDirectory,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 Verb = "runas",
@@ -311,7 +361,7 @@ namespace NuGet.OneGet {
 
             var uri = new Uri(url);
 
-            ProviderServices.DownloadFile(uri, fileFullPath, this);
+            ProviderServices.DownloadFile(uri, fileFullPath, this.REQ);
             if (string.IsNullOrEmpty(fileFullPath)) {
                 throw new Exception("Failed to download file {0}".format(url));
             }
@@ -325,13 +375,11 @@ namespace NuGet.OneGet {
 
             switch (fileType.ToLowerInvariant()) {
                 case "msi":
-                    return StartChocolateyProcessAsAdmin("/i {0} {1}".format(file, silentArgs), "msiexec.exe", true, true, validExitCodes, workingDirectory);
+                case "msu":
+                    return ProviderServices.Install(file,silentArgs, this.REQ);
 
                 case "exe":
                     return StartChocolateyProcessAsAdmin("{0}".format(silentArgs), file, true, true, validExitCodes, workingDirectory);
-
-                case "msu":
-                    return StartChocolateyProcessAsAdmin("{0} {1}".format(file, silentArgs), "wusa.exe", true, true, validExitCodes, workingDirectory);
             }
             return false;
         }
@@ -343,26 +391,18 @@ namespace NuGet.OneGet {
                 var tempFolder = Path.GetTempPath();;
                 var chocTempDir = Path.Combine(tempFolder, "chocolatey");
                 var pkgTempDir = Path.Combine(chocTempDir, packageName);
-                ProviderServices.Delete(pkgTempDir, this);
-                ProviderServices.CreateFolder(pkgTempDir, this);
+                ProviderServices.Delete(pkgTempDir, this.REQ);
+                ProviderServices.CreateFolder(pkgTempDir, this.REQ);
 
                 if (!string.IsNullOrEmpty(url64bit) && Environment.Is64BitOperatingSystem && !ForceX86) {
                     url = url64bit;
                 }
 
-                string localFile = null;
-
+                string localFile = ProviderServices.CanonicalizePath(url,workingDirectory);
 
                 // check to see if the url is a local file 
-                if (Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute)) {
-                    var uri = new Uri(url);
-                    if (uri.IsFile) {
-                        // file uri.
-                        localFile = Path.GetFullPath(uri.AbsolutePath);
-                        if (!File.Exists(localFile)) {
-                            localFile = null;
-                        }
-                    }
+                if (!ProviderServices.FileExists(localFile)) {
+                    localFile = null;
                 }
 
                 if (string.IsNullOrEmpty(localFile)) {
@@ -380,7 +420,7 @@ namespace NuGet.OneGet {
             }
             catch (Exception e) {
                 e.Dump(this);
-                Error(ErrorCategory.InvalidResult, packageName, Constants.DependentPackageFailedInstall, packageName);
+                Error(ErrorCategory.InvalidResult, packageName, Constants.Messages.DependentPackageFailedInstall, packageName);
                 
                 throw new Exception("Failed Installation");
             }
@@ -417,7 +457,7 @@ namespace NuGet.OneGet {
             get {
                 var path = Path.Combine(RootInstallationPath, "lib");
                 if (!Directory.Exists(path)) {
-                    ProviderServices.CreateFolder(path, this);
+                    ProviderServices.CreateFolder(path, this.REQ);
                 }
                 return path;
             }
@@ -428,7 +468,7 @@ namespace NuGet.OneGet {
             get {
                 var path = Path.Combine(RootInstallationPath, "bin");
                 if (!Directory.Exists(path)) {
-                    ProviderServices.CreateFolder(path, this);
+                    ProviderServices.CreateFolder(path, this.REQ);
                 }
                 return Path.Combine(RootInstallationPath, "bin");
             }
@@ -486,12 +526,12 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
         public void RemoveConsoleBin(string exe, string name = null) {
-            ProviderServices.Delete(GetBatFileLocation(exe, name),RemoteThis);
+            ProviderServices.Delete(GetBatFileLocation(exe, name), this.REQ);
         }
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
         public void RemoveGuiBin(string exe, string name = null) {
-            ProviderServices.Delete(GetBatFileLocation(exe, name),RemoteThis);
+            ProviderServices.Delete(GetBatFileLocation(exe, name), this.REQ);
         }
 
 
@@ -552,7 +592,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
             }
             var file = Path.Combine(Path.GetTempPath(), packageName.MakeSafeFileName());
 
-            ProviderServices.DownloadFile(new Uri(vsixUrl), file, this);
+            ProviderServices.DownloadFile(new Uri(vsixUrl), file, this.REQ);
 
             if (string.IsNullOrEmpty(file) || !File.Exists(file)) {
                 throw new Exception("Unable to download file {0}".format(vsixUrl));
@@ -620,17 +660,18 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
 
                 if (!string.IsNullOrEmpty(packageName)) {
                     var packageLibPath = Environment.GetEnvironmentVariable("ChocolateyPackageFolder");
-                    ProviderServices.CreateFolder(packageLibPath, this);
+                    ProviderServices.CreateFolder(packageLibPath, this.REQ);
                     var zipFileName = Path.GetFileName(zipfileFullPath);
                     var zipExtractLogFullPath = Path.Combine(packageLibPath, "{0}.txt".format(zipFileName));
                     var snapshot = new Snapshot(this, destination);
 
-                    UnZip(fileFullPath, destination);
+                    // UnZip(fileFullPath, destination);
+                    var files =ProviderServices.UnpackArchive(fileFullPath, destination, this.REQ).ToArray();
 
                     snapshot.WriteFileDiffLog(zipExtractLogFullPath);
                 }
                 else {
-                    UnZip(fileFullPath, destination);
+                    var files = ProviderServices.UnpackArchive(fileFullPath, destination, this.REQ).ToArray();
                 }
                 return destination;
             }
@@ -641,17 +682,19 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
             }
         }
 
+        /*
         private void UnZip(string zipFile, string destination) {
+
             var zip = ZipArchive.OpenOnFile(zipFile, FileMode.Open, FileAccess.Read, FileShare.Read, true);
             foreach (var file in zip.Files) {
 
                 var fName = Path.Combine(destination, file.Name);
                 if (File.Exists(fName) || Directory.Exists(fName)) {
-                    ProviderServices.DeleteFile(fName, RemoteThis);
+                    ProviderServices.DeleteFile(fName, this.REQ);
                 }
 
                 if (file.FolderFlag) {
-                    ProviderServices.CreateFolder(fName, RemoteThis);
+                    ProviderServices.CreateFolder(fName, this.REQ);
                     continue;
                 }
 
@@ -664,6 +707,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 }
             }
         }
+         * */
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
         public bool InstallChocolateyZipPackage(string packageName, string url, string unzipLocation, string url64bit, string specificFolder, string workingDirectory) {
@@ -672,8 +716,8 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 var tempFolder = Path.GetTempPath();;
                 var chocTempDir = Path.Combine(tempFolder, "chocolatey");
                 var pkgTempDir = Path.Combine(chocTempDir, packageName);
-                ProviderServices.Delete(pkgTempDir, this);
-                ProviderServices.CreateFolder(pkgTempDir, this);
+                ProviderServices.Delete(pkgTempDir, this.REQ);
+                ProviderServices.CreateFolder(pkgTempDir, this.REQ);
 
                 var file = Path.Combine(pkgTempDir, "{0}install.{1}".format(packageName, "zip"));
                 if (GetChocolateyWebFile(packageName, file, url, url64bit)) {
@@ -700,7 +744,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 var zipContentFile = Path.Combine(packageLibPath, "{0}.txt".format(Path.GetFileName(zipFileName)));
                 if (File.Exists(zipContentFile)) {
                     foreach (var file in File.ReadAllLines(zipContentFile).Where(each => !string.IsNullOrEmpty(each) && File.Exists(each))) {
-                        ProviderServices.DeleteFile(file,RemoteThis);
+                        ProviderServices.DeleteFile(file, this.REQ);
                     }
                 }
             }
@@ -742,7 +786,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 throw new Exception("Failed.");
             }
 
-            ProviderServices.AddPinnedItemToTaskbar(Path.GetFullPath(targetFilePath),RemoteThis);
+            ProviderServices.AddPinnedItemToTaskbar(Path.GetFullPath(targetFilePath), this.REQ);
             return true;
         }
 
@@ -799,4 +843,13 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
         }
     }
 
+    public class DebTest : MarshalByRefObject {
+        private ChocolateyRequest _request;
+        public DebTest(ChocolateyRequest req) {
+            _request = req;
+        }
+        public void Debug(string text, params object[] args) {
+            _request.Debug(text, args);
+        }
+    }
 }

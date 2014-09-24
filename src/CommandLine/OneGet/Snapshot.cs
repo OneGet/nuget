@@ -28,7 +28,7 @@ namespace NuGet.OneGet {
             _request = request;
             Folder = folder;
             _request.Verbose("Taking Snapshot", folder);
-            _request.ProviderServices.CreateFolder(folder, null);
+            _request.ProviderServices.CreateFolder(folder, _request.REQ);
             _files = Directory.EnumerateFiles(Folder, "*", SearchOption.AllDirectories).ToDictionary(each => each, each => new FileInfo(each), StringComparer.OrdinalIgnoreCase);
         }
 

@@ -25,9 +25,11 @@ namespace NuGet.OneGet {
     using System.Text.RegularExpressions;
     using System.Xml.Linq;
     using global::NuGet;
+    using global::OneGet.ProviderSDK;
     using RequestImpl = System.MarshalByRefObject;
 
-    public abstract class BaseRequest : IDisposable {
+    public abstract class BaseRequest : Request {
+#if FALSE
         #region copy core-apis
 
         /* Synced/Generated code =================================================== */
@@ -44,9 +46,8 @@ namespace NuGet.OneGet {
         ///     The consumer of this function should either use this as a dynamic object
         ///     Or DuckType it to an interface that resembles IPacakgeManagementService
         /// </summary>
-        /// <param name="requestImpl"></param>
         /// <returns></returns>
-        public abstract object GetPackageManagementService(RequestImpl requestImpl);
+        public abstract object GetPackageManagementService();
 
         /// <summary>
         ///     Returns the interface type for a Request that the OneGet Core is expecting
@@ -104,25 +105,14 @@ namespace NuGet.OneGet {
 
         public abstract bool CompleteProgress(int activityId, bool isSuccessful);
 
-        public abstract IEnumerable<string> GetOptionValues(string category, string key);
+        public abstract IEnumerable<string> GetOptionValues(string key);
 
         /// <summary>
         ///     Used by a provider to request what metadata keys were passed from the user
-        ///
-        /// This is API is deprecated, use the string variant instead.
         /// </summary>
         /// <returns></returns>
-        public abstract IEnumerable<string> GetOptionKeys(int category);
+        public abstract IEnumerable<string> GetOptionKeys();
 
-        /// <summary>
-        /// 
-        /// 
-        /// This is API is deprecated, use the string variant instead.
-        /// </summary>
-        /// <param name="category"></param>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public abstract IEnumerable<string> GetOptionValues(int category, string key);
 
         public abstract IEnumerable<string> GetSources();
 
@@ -208,14 +198,11 @@ namespace NuGet.OneGet {
         ///     Used by a provider to return the fields for a Metadata Definition
         ///     The cmdlets can use this to supply tab-completion for metadata to the user.
         /// </summary>
-        /// <param name="category"> one of ['provider', 'source', 'package', 'install']</param>
         /// <param name="name">the provider-defined name of the option</param>
         /// <param name="expectedType"> one of ['string','int','path','switch']</param>
         /// <param name="isRequired">if the parameter is mandatory</param>
         /// <returns></returns>
-        public abstract bool YieldDynamicOption(int category, string name, int expectedType, bool isRequired);
-
-        public abstract bool YieldDynamicOption(string category, string name, string expectedType, bool isRequired);
+        public abstract bool YieldDynamicOption(string name, string expectedType, bool isRequired);
 
         public abstract bool YieldKeyValuePair(string key, string value);
 
@@ -227,15 +214,6 @@ namespace NuGet.OneGet {
 
         public bool Warning(string messageText, params object[] args) {
             return Warning(FormatMessageString(messageText,args));
-        }
-
-        internal bool Error( ErrorCategory category, string targetObjectValue, string messageText, params object[] args) {
-            return Error(messageText, category.ToString(), targetObjectValue, FormatMessageString(messageText, args));
-        }
-
-        internal bool ThrowError(ErrorCategory category, string targetObjectValue, string messageText, params object[] args) {
-            Error(messageText, category.ToString(), targetObjectValue, FormatMessageString(messageText, args));
-            throw new Exception("MSG:TerminatingError");
         }
 
         public bool Message(string messageText, params object[] args) {
@@ -275,9 +253,9 @@ namespace NuGet.OneGet {
                 return string.Empty;
             }
 
-            if (messageText.StartsWith(Constants.MSGPrefix, true, CultureInfo.CurrentCulture)) {
+            if (messageText.StartsWith(Constants_2.MSGPrefix, true, CultureInfo.CurrentCulture)) {
                 // check with the caller first, then with the local resources, and fallback to using the messageText itself.
-                messageText = GetMessageString(messageText.Substring(Constants.MSGPrefix.Length)) ?? GetMessageStringInternal(messageText) ?? messageText;    
+                messageText = GetMessageString(messageText.Substring(Constants_2.MSGPrefix.Length)) ?? GetMessageStringInternal(messageText) ?? messageText;    
             }
 
             // if it doesn't look like we have the correct number of parameters
@@ -332,39 +310,19 @@ namespace NuGet.OneGet {
             return RequestExtensions.Extend(this, GetIRequestInterface(), objects);
         }
 
-        internal string GetOptionValue(OptionCategory category, string name) {
-            // get the value from the request
-            if (CoreVersion() > 0) {
-                return (GetOptionValues(category.ToString(), name) ?? Enumerable.Empty<string>()).LastOrDefault();
-            }
-            return (GetOptionValues((int)category, name) ?? Enumerable.Empty<string>()).LastOrDefault();
+        internal string GetOptionValue(string name) {
+            return (GetOptionValues(name) ?? Enumerable.Empty<string>()).LastOrDefault();
         }
 
-        internal IEnumerable<string> GetOptionValues(OptionCategory category, string name) {
-            // get the value from the request
-            if (CoreVersion() > 0) {
-                return (GetOptionValues(category.ToString(), name) ?? Enumerable.Empty<string>());
-            }
-            return (GetOptionValues((int)category, name) ?? Enumerable.Empty<string>());
-        }
-
-        public bool YieldDynamicOption(OptionCategory category, string name, OptionType expectedType, bool isRequired) {
-            if (CoreVersion() > 0) {
-                return YieldDynamicOption(category.ToString(), name, expectedType.ToString(), isRequired);
-            }
-
-            // Deprecated--August Preview build uses ints.
-            return YieldDynamicOption((int)category, name, (int)expectedType, isRequired);
-        }
-
-        public bool YieldDynamicOption(OptionCategory category, string name, OptionType expectedType, bool isRequired, IEnumerable<string> permittedValues) {
-            if (CoreVersion() > 0) {
-                return YieldDynamicOption(category.ToString(), name, expectedType.ToString(), isRequired) && (permittedValues ?? Enumerable.Empty<string>()).All(each => YieldKeyValuePair(name, each));
-            }
-            return YieldDynamicOption((int)category, name, (int)expectedType, isRequired) && (permittedValues ?? Enumerable.Empty<string>()).All(each => YieldKeyValuePair(name, each));
+        public bool YieldDynamicOption( string name, string expectedType, bool isRequired, IEnumerable<string> permittedValues) {
+            return YieldDynamicOption(name, expectedType, isRequired) && (permittedValues ?? Enumerable.Empty<string>()).All(each => YieldKeyValuePair(name, each));
         }
 
         #endregion
+#endif
+        internal const string MultiplePackagesInstalledExpectedOne = "MSG:MultiplePackagesInstalledExpectedOne_package";
+
+        public abstract string ProviderName {get;}
 
         private static readonly Regex _rxFastPath = new Regex(@"\$(?<source>[\w,\+,\/,=]*)\\(?<id>[\w,\+,\/,=]*)\\(?<version>[\w,\+,\/,=]*)");
         private static readonly Regex _rxPkgParse = new Regex(@"'(?<pkgId>\S*)\s(?<ver>.*?)'");
@@ -375,55 +333,55 @@ namespace NuGet.OneGet {
 
         internal string[] Tag {
             get {
-                return GetOptionValues(OptionCategory.Package, "Tag").ToArray();
+                return GetOptionValues("Tag").ToArray();
             }
         }
 
         internal string Contains {
             get {
-                return GetOptionValue(OptionCategory.Package, "Contains");
+                return GetOptionValue("Contains");
             }
         }
 
         internal bool SkipValidate {
             get {
-                return GetOptionValue(OptionCategory.Source, "SkipValidate").IsTrue();
+                return GetOptionValue("SkipValidate").IsTrue();
             }
         }
 
         internal bool AllowPrereleaseVersions {
             get {
-                return GetOptionValue(OptionCategory.Package, "AllowPrereleaseVersions").IsTrue();
+                return GetOptionValue("AllowPrereleaseVersions").IsTrue();
             }
         }
 
         internal bool AllVersions {
             get {
-                return GetOptionValue(OptionCategory.Package, "AllVersions").IsTrue();
+                return GetOptionValue( "AllVersions").IsTrue();
             }
         }
 
         internal bool SkipDependencies {
             get {
-                return GetOptionValue(OptionCategory.Install, "SkipDependencies").IsTrue();
+                return GetOptionValue( "SkipDependencies").IsTrue();
             }
         }
 
         internal bool ContinueOnFailure {
             get {
-                return GetOptionValue(OptionCategory.Install, "ContinueOnFailure").IsTrue();
+                return GetOptionValue( "ContinueOnFailure").IsTrue();
             }
         }
 
         internal bool ExcludeVersion {
             get {
-                return GetOptionValue(OptionCategory.Install, "ExcludeVersion").IsTrue();
+                return GetOptionValue( "ExcludeVersion").IsTrue();
             }
         }
 
         internal string PackageSaveMode {
             get {
-                return GetOptionValue(OptionCategory.Install, "PackageSaveMode");
+                return GetOptionValue( "PackageSaveMode");
             }
         }
 
@@ -468,7 +426,7 @@ namespace NuGet.OneGet {
                     if (Uri.IsWellFormedUriString(src, UriKind.Absolute)) {
                         // we have been passed in an URI
                         var srcUri = new Uri(src);
-                        if (NuGetProvider.SupportedSchemes.Contains(srcUri.Scheme.ToLower())) {
+                        if (CommonProvider<NuGetRequest>.SupportedSchemes.Contains(srcUri.Scheme.ToLower())) {
                             // it's one of our supported uri types.
                             var isValidated = false;
 
@@ -486,14 +444,14 @@ namespace NuGet.OneGet {
                                 };
                                 continue;
                             }
-                            Error(ErrorCategory.InvalidArgument, src,  Constants.SourceLocationNotValid, src);
-                            Warning(Constants.UnableToResolveSource, src);
+                            Error(ErrorCategory.InvalidArgument, src,  global::OneGet.ProviderSDK.Constants.Messages.SourceLocationNotValid, src);
+                            Warning(global::OneGet.ProviderSDK.Constants.Messages.UnableToResolveSource, src);
                             continue;
                         }
 
                         // hmm. not a valid location?
-                        Error(ErrorCategory.InvalidArgument, src, Constants.UriSchemeNotSupported, src);
-                        Warning(Constants.UnableToResolveSource, src);
+                        Error(ErrorCategory.InvalidArgument, src, global::OneGet.ProviderSDK.Constants.Messages.UriSchemeNotSupported, src);
+                        Warning(global::OneGet.ProviderSDK.Constants.Messages.UnableToResolveSource, src);
                         continue;
                     }
 
@@ -508,7 +466,7 @@ namespace NuGet.OneGet {
                         };
                     } else {
                         // hmm. not a valid location?
-                        Warning(Constants.UnableToResolveSource, src);
+                        Warning(global::OneGet.ProviderSDK.Constants.Messages.UnableToResolveSource, src);
                     }
                 }
             }
@@ -518,13 +476,6 @@ namespace NuGet.OneGet {
             get {
                 return typeof (AggregateRepository).Assembly.Location;
             }
-        }
-
-        public bool Yield(KeyValuePair<string, string[]> pair) {
-            if (pair.Value.Length == 0) {
-                return YieldKeyValuePair(pair.Key, null);
-            }
-            return pair.Value.All(each => YieldKeyValuePair(pair.Key, each));
         }
 
         internal abstract void RemovePackageSource(string id);
@@ -576,7 +527,7 @@ namespace NuGet.OneGet {
         }
 
         private bool ValidateSourceUri(Uri srcUri) {
-            if (!NuGetProvider.SupportedSchemes.Contains(srcUri.Scheme.ToLowerInvariant())) {
+            if (!CommonProvider<NuGetRequest>.SupportedSchemes.Contains(srcUri.Scheme.ToLowerInvariant())) {
                 return false;
             }
 
@@ -642,8 +593,8 @@ namespace NuGet.OneGet {
 
             if (Uri.IsWellFormedUriString(nameOrLocation, UriKind.Absolute)) {
                 var uri = new Uri(nameOrLocation, UriKind.Absolute);
-                if (!NuGetProvider.SupportedSchemes.Contains(uri.Scheme.ToLowerInvariant())) {
-                    Error(ErrorCategory.InvalidArgument, uri.ToString(), Constants.UriSchemeNotSupported, uri);
+                if (!CommonProvider<NuGetRequest>.SupportedSchemes.Contains(uri.Scheme.ToLowerInvariant())) {
+                    Error(ErrorCategory.InvalidArgument, uri.ToString(), global::OneGet.ProviderSDK.Constants.Messages.UriSchemeNotSupported, uri);
                     return null;
                 }
 
@@ -659,20 +610,20 @@ namespace NuGet.OneGet {
                 }    
             }
 
-            Error(ErrorCategory.InvalidArgument, nameOrLocation, Constants.UnableToResolveSource, nameOrLocation);
+            Error(ErrorCategory.InvalidArgument, nameOrLocation, global::OneGet.ProviderSDK.Constants.Messages.UnableToResolveSource, nameOrLocation);
             return null;
         }
 
         internal IEnumerable<IPackage> FilterOnVersion(IEnumerable<IPackage> pkgs, string requiredVersion, string minimumVersion, string maximumVersion) {
-            if (!string.IsNullOrEmpty(requiredVersion)) {
+            if (!String.IsNullOrEmpty(requiredVersion)) {
                 pkgs = pkgs.Where(each => each.Version == new SemanticVersion(requiredVersion));
             }
 
-            if (!string.IsNullOrEmpty(minimumVersion)) {
+            if (!String.IsNullOrEmpty(minimumVersion)) {
                 pkgs = pkgs.Where(each => each.Version >= new SemanticVersion(minimumVersion));
             }
 
-            if (!string.IsNullOrEmpty(maximumVersion)) {
+            if (!String.IsNullOrEmpty(maximumVersion)) {
                 pkgs = pkgs.Where(each => each.Version <= new SemanticVersion(maximumVersion));
             }
 
@@ -680,7 +631,7 @@ namespace NuGet.OneGet {
         }
 
         internal string MakeFastPath(PackageSource source, string id, string version) {
-            return string.Format(@"${0}\{1}\{2}", source.Serialized, id.ToBase64(), version.ToBase64());
+            return String.Format(@"${0}\{1}\{2}", source.Serialized, id.ToBase64(), version.ToBase64());
         }
 
         public bool TryParseFastPath(string fastPath, out string source, out string id, out string version) {
@@ -724,22 +675,22 @@ namespace NuGet.OneGet {
                     if (!YieldSoftwareMetadata(pkg.FastPath, "FromTrustedSource", pkg.PackageSource.Trusted.ToString())) {
                         return false;
                     }
-                    if (pkg.Package.LicenseUrl != null && !string.IsNullOrEmpty(pkg.Package.LicenseUrl.ToString()) ) {
+                    if (pkg.Package.LicenseUrl != null && !String.IsNullOrEmpty(pkg.Package.LicenseUrl.ToString()) ) {
                         if(!YieldLink(pkg.FastPath, pkg.Package.LicenseUrl.ToString(), "license", null, null, null, null, null)) {
                             return false;
                         }
                     }
-                    if (pkg.Package.ProjectUrl != null && !string.IsNullOrEmpty(pkg.Package.ProjectUrl.ToString())) {
+                    if (pkg.Package.ProjectUrl != null && !String.IsNullOrEmpty(pkg.Package.ProjectUrl.ToString())) {
                         if(!YieldLink(pkg.FastPath, pkg.Package.ProjectUrl.ToString(), "project", null, null, null, null, null)) {
                             return false;
                         }
                     }
-                    if (pkg.Package.ReportAbuseUrl != null && !string.IsNullOrEmpty(pkg.Package.ReportAbuseUrl.ToString())) {
+                    if (pkg.Package.ReportAbuseUrl != null && !String.IsNullOrEmpty(pkg.Package.ReportAbuseUrl.ToString())) {
                         if(!YieldLink(pkg.FastPath, pkg.Package.ReportAbuseUrl.ToString(), "abuse", null, null, null, null, null) ) {
                             return false;
                         }
                     }
-                    if (pkg.Package.IconUrl != null && !string.IsNullOrEmpty(pkg.Package.IconUrl.ToString())) {
+                    if (pkg.Package.IconUrl != null && !String.IsNullOrEmpty(pkg.Package.IconUrl.ToString())) {
                         if (!YieldLink(pkg.FastPath, pkg.Package.IconUrl.ToString(), "icon", null, null, null, null, null)) {
                             return false;
                         }
@@ -766,10 +717,12 @@ namespace NuGet.OneGet {
             if (packageReferences == null) {
                 return false;
             }
+            Debug("Iterating");
 
             foreach (var pkg in packageReferences) {
                 foundPackage = true;
                 try {
+                    Debug("Yielding");
                     if (!YieldPackage(pkg, searchKey)) {
                         break;
                     }
@@ -778,21 +731,24 @@ namespace NuGet.OneGet {
                     return false;
                 }
             }
+
+            Debug("Done Iterating");
             return foundPackage;
         }
 
         internal IEnumerable<PackageItem> GetPackageById(string name, string requiredVersion = null, string minimumVersion = null, string maximumVersion = null, bool allowUnlisted = false) {
-            if (string.IsNullOrEmpty(name)) {
+            if (String.IsNullOrEmpty(name)) {
                 return Enumerable.Empty<PackageItem>();
             }
             return SelectedSources.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered).SelectMany(source => {
                 try {
+                    Debug("Initializing Query");
                     var pkgs = source.Repository.FindPackagesById(name);
-
-                    if (!AllVersions && (string.IsNullOrEmpty(requiredVersion) && string.IsNullOrEmpty(minimumVersion) && string.IsNullOrEmpty(maximumVersion))) {
+                    Debug("Queried");
+                    if (!AllVersions && (String.IsNullOrEmpty(requiredVersion) && String.IsNullOrEmpty(minimumVersion) && String.IsNullOrEmpty(maximumVersion))) {
                         pkgs = from p in pkgs where p.IsLatestVersion select p;
                     }
-
+                    Debug("Filtering");
                     return FilterOnVersion(pkgs, requiredVersion, minimumVersion, maximumVersion)
                         .Select(pkg => new PackageItem {
                             Package = pkg,
@@ -859,7 +815,7 @@ namespace NuGet.OneGet {
 
         private IEnumerable<PackageItem> SearchSourceForPackages(PackageSource source, string name, string requiredVersion, string minimumVersion, string maximumVersion) {
             try {
-                if (!string.IsNullOrEmpty(name) && WildcardPattern.ContainsWildcardCharacters(name)) {
+                if (!String.IsNullOrEmpty(name) && WildcardPattern.ContainsWildcardCharacters(name)) {
 
                     // NuGet does not support PowerShell/POSIX style wildcards and supports only '*' in searchTerm with NuGet.exe
                     // Replace the range from '[' - to ']' with * and ? with * then wildcard pattern is applied on the results from NuGet.exe
@@ -875,8 +831,8 @@ namespace NuGet.OneGet {
                     var wildcardPattern = new WildcardPattern(searchTerm, wildcardOptions);
 
                     IEnumerable<string> packageIds = null;
-                    using (var p = AsyncProcess.Start(NuGetExePath, string.Format(@"list ""{0}"" -Source ""{1}"" ", searchTerm, source.Location))) {
-                        packageIds = p.StandardOutput.Where(each => !string.IsNullOrEmpty(each)).Select(l => {
+                    using (var p = AsyncProcess.Start(NuGetExePath, String.Format(@"list ""{0}"" -Source ""{1}"" ", searchTerm, source.Location))) {
+                        packageIds = p.StandardOutput.Where(each => !String.IsNullOrEmpty(each)).Select(l => {
                             Verbose("NuGet: {0}", l);
                             if (l.Contains("No packages found.")) {
                                 return null;
@@ -890,7 +846,7 @@ namespace NuGet.OneGet {
                             return null;
                         }).Where(each => each != null).ToArray();
 
-                        foreach (var l in p.StandardError.Where(l => !string.IsNullOrEmpty(l))) {
+                        foreach (var l in p.StandardError.Where(l => !String.IsNullOrEmpty(l))) {
                             Warning("NuGet: {0}", l);
                         }
                     }
@@ -908,7 +864,7 @@ namespace NuGet.OneGet {
 
             try { 
                 var criteria = Contains;
-                if (string.IsNullOrEmpty(criteria)) {
+                if (String.IsNullOrEmpty(criteria)) {
                     criteria = name;
                 }
                 var packages = source.Repository.GetPackages().Find(criteria);
@@ -919,7 +875,7 @@ namespace NuGet.OneGet {
                 IEnumerable<IPackage> pkgs = null;
 
                 // query filtering:
-                if (!AllVersions && (string.IsNullOrEmpty(requiredVersion) && string.IsNullOrEmpty(minimumVersion) && string.IsNullOrEmpty(maximumVersion))) {
+                if (!AllVersions && (String.IsNullOrEmpty(requiredVersion) && String.IsNullOrEmpty(minimumVersion) && String.IsNullOrEmpty(maximumVersion))) {
                     pkgs = packages.FindLatestVersion();
                 }
                 else {
@@ -928,7 +884,7 @@ namespace NuGet.OneGet {
                 }
 
                 // if they passed a name, restrict the search things that actually contain the name in the FullName.
-                if (!string.IsNullOrEmpty(name)) {
+                if (!String.IsNullOrEmpty(name)) {
                     pkgs = FilterOnName(pkgs, name);
                 }
 
@@ -974,7 +930,8 @@ namespace NuGet.OneGet {
                     var depRefs = dep.VersionSpec == null ? GetPackageById(dep.Id).ToArray() : GetPackageByIdAndVersionSpec(dep.Id, dep.VersionSpec, true).ToArray();
 
                     if (depRefs.Length == 0) {
-                        ThrowError(ErrorCategory.ObjectNotFound, packageItem.GetCanonicalId(this), Constants.DependencyResolutionError, GetCanonicalPackageId(Constants.ProviderName, dep.Id, ((object)dep.VersionSpec ?? "").ToString()));
+                        Error(ErrorCategory.ObjectNotFound, packageItem.GetCanonicalId(this), global::OneGet.ProviderSDK.Constants.Messages.DependencyResolutionError, GetCanonicalPackageId(ProviderName, dep.Id, ((object)dep.VersionSpec ?? "").ToString()));
+                        throw new Exception("failed");
                     }
 
                     if (depRefs.Any(each => IsPackageInstalled(each.Id, each.Version))) {
@@ -1015,10 +972,10 @@ namespace NuGet.OneGet {
 
             using (
                 var p = AsyncProcess.Start(NuGetExePath,
-                    string.Format(@"install ""{0}"" -Version ""{1}"" -Source ""{2}"" -PackageSaveMode ""{4}""  -OutputDirectory ""{3}"" -Verbosity detailed {5}", item.Id, item.Version, item.PackageSource.Location, Destination, PackageSaveMode, ExcludeVersion ? "-ExcludeVersion" : ""))
+                    String.Format(@"install ""{0}"" -Version ""{1}"" -Source ""{2}"" -PackageSaveMode ""{4}""  -OutputDirectory ""{3}"" -Verbosity detailed {5}", item.Id, item.Version, item.PackageSource.Location, Destination, PackageSaveMode, ExcludeVersion ? "-ExcludeVersion" : ""))
                 ) {
                 foreach (var l in p.StandardOutput) {
-                    if (string.IsNullOrEmpty(l)) {
+                    if (String.IsNullOrEmpty(l)) {
                         continue;
                     }
 
@@ -1041,7 +998,7 @@ namespace NuGet.OneGet {
                     }
                 }
 
-                foreach (var l in p.StandardError.Where(l => !string.IsNullOrEmpty(l))) {
+                foreach (var l in p.StandardError.Where(l => !String.IsNullOrEmpty(l))) {
                     Warning("NuGet: {0}", l);
                 }
 
@@ -1054,7 +1011,7 @@ namespace NuGet.OneGet {
         }
 
         internal IEnumerable<PackageItem> GetPackageByIdAndVersionSpec(string name, IVersionSpec versionSpec, bool allowUnlisted = false) {
-            if (string.IsNullOrEmpty(name)) {
+            if (String.IsNullOrEmpty(name)) {
                 return Enumerable.Empty<PackageItem>();
             }
 
@@ -1119,7 +1076,7 @@ namespace NuGet.OneGet {
                     return true;
                 }
 
-                Error(ErrorCategory.InvalidResult, packageItem.GetCanonicalId(this), Constants.MultiplePackagesInstalledExpectedOne, packageItem.GetCanonicalId(this));
+                Error(ErrorCategory.InvalidResult, packageItem.GetCanonicalId(this), MultiplePackagesInstalledExpectedOne, packageItem.GetCanonicalId(this));
             }
             return false;
         }
@@ -1128,19 +1085,13 @@ namespace NuGet.OneGet {
             return true;
         }
 
-        private ProviderServicesApi _providerServices;
-        public ProviderServicesApi ProviderServices {
-            get {
-                return _providerServices ?? (_providerServices = GetPackageManagementService(RemoteThis).As<PMS>().ProviderServices.As<ProviderServicesApi>());
-            }
-        }
 
         internal void UninstallPackage(PackageItem pkg) {
             var dir = pkg.InstalledDirectory;
 
-            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) {
+            if (!String.IsNullOrEmpty(dir) && Directory.Exists(dir)) {
                 PreUninstall(pkg);
-                ProviderServices.DeleteFolder(pkg.InstalledDirectory, RemoteThis);
+                ProviderServices.DeleteFolder(pkg.InstalledDirectory, this.REQ);
                 YieldPackage(pkg, pkg.Id);
                 PostUninstall(pkg);
             }
@@ -1157,11 +1108,5 @@ namespace NuGet.OneGet {
     internal class InstallResult : Dictionary<InstallStatus, List<PackageItem>> {
         internal InstallStatus Status = InstallStatus.Unknown;
     }
-
-    public interface PMS {
-        object ProviderServices {get;}
-    }
-
-
 }
 

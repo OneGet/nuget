@@ -118,7 +118,7 @@ namespace NuGet.OneGet {
 
         private string _canonicalId;
         internal string GetCanonicalId(BaseRequest request) {
-            return _canonicalId ?? (_canonicalId = request.GetCanonicalPackageId(Constants.ProviderName, Id, Version));
+            return _canonicalId ?? (_canonicalId = request.GetCanonicalPackageId(request.ProviderName, Id, Version));
         }
     }
 }

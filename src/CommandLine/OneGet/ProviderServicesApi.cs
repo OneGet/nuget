@@ -16,7 +16,7 @@ namespace NuGet.OneGet {
     using System;
     using System.Collections.Generic;
 
-    public abstract class ProviderServicesApi {
+    public abstract class xProviderServicesApi {
         #region copy service-apis
 
         /* Synced/Generated code =================================================== */
@@ -50,6 +50,15 @@ namespace NuGet.OneGet {
 
         public abstract bool IsElevated {get;}
 
+        public abstract string CanonicalizePath(string text, string currentDirectory);
+
+        public abstract bool FileExists(string path);
+
+        public abstract bool DirectoryExists(string path);
+
+        public abstract bool Install(string fileName, string additionalArgs, Object requestImpl);
+
+        public abstract bool IsSignedAndTrusted(string filename, Object requestImpl);
         #endregion
     }
 }

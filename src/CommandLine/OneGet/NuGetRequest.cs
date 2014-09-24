@@ -20,14 +20,28 @@ namespace NuGet.OneGet {
     using System.Text;
     using System.Xml.Linq;
     using System.Xml.XPath;
+    using global::OneGet.ProviderSDK;
 
     public abstract class NuGetRequest : BaseRequest {
 
-        internal override string Destination {
+        public override string ProviderName {
             get {
-                return Path.GetFullPath(GetOptionValue(OptionCategory.Install, "Destination"));
+                return "Chocolatey";
             }
         }
+
+        internal override string Destination {
+            get {
+                return Path.GetFullPath(GetOptionValue( "Destination"));
+            }
+        }
+
+        internal const string DefaultConfig = @"<?xml version=""1.0""?>
+<configuration>
+  <packageSources>
+    <add key=""nuget.org"" value=""https://www.nuget.org/api/v2/"" />
+  </packageSources>
+</configuration>";
 
         internal XDocument Config {
             get {
@@ -41,7 +55,7 @@ namespace NuGet.OneGet {
                 catch {
                     // a bad xml doc.
                 }
-                return XDocument.Load(new MemoryStream(Encoding.UTF8.GetBytes(Constants.DefaultConfig)));
+                return XDocument.Load(new MemoryStream((byte[])Encoding.UTF8.GetBytes(DefaultConfig)));
             }
             set {
                 if (value == null) {
@@ -50,7 +64,7 @@ namespace NuGet.OneGet {
 
                 Verbose("Saving NuGet Config {0}", ConfigurationFileLocation);
 
-                ProviderServices.CreateFolder(Path.GetDirectoryName(ConfigurationFileLocation), RemoteThis);
+                ProviderServices.CreateFolder(Path.GetDirectoryName(ConfigurationFileLocation), this.REQ);
                 value.Save(ConfigurationFileLocation);
             }
         }
@@ -87,7 +101,7 @@ namespace NuGet.OneGet {
 
         internal override void RemovePackageSource(string id) {
             var config = Config;
-            var source = config.XPathSelectElements(string.Format("/configuration/packageSources/add[@key='{0}']", id)).FirstOrDefault();
+            var source = config.XPathSelectElements(String.Format("/configuration/packageSources/add[@key='{0}']", id)).FirstOrDefault();
             if (source != null) {
                 source.Remove();
                 Config = config;
@@ -119,15 +133,15 @@ namespace NuGet.OneGet {
 
         protected override string ConfigurationFileLocation {
             get {
-                if (string.IsNullOrEmpty(_configurationFileLocation)) {
+                if (String.IsNullOrEmpty(_configurationFileLocation)) {
                     // get the value from the request
-                    var path = GetOptionValue(OptionCategory.Source, "ConfigFile");
-                    if (!string.IsNullOrEmpty(path)) {
+                    var path = GetOptionValue("ConfigFile");
+                    if (!String.IsNullOrEmpty(path)) {
                         return path;
                     }
 
                     //otherwise, use %APPDATA%/NuGet/NuGet.Config
-                    _configurationFileLocation = Path.Combine(ProviderServices.GetKnownFolder("ApplicationData", RemoteThis), "NuGet", "NuGet.config");
+                    _configurationFileLocation = Path.Combine(ProviderServices.GetKnownFolder("ApplicationData", this.REQ), "NuGet", "NuGet.config");
                 }
                 return _configurationFileLocation;
             }

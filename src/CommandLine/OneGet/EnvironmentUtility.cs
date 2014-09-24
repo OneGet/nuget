@@ -19,6 +19,7 @@ namespace NuGet.OneGet {
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
+    using global::OneGet.ProviderSDK;
 
     public static class EnvironmentUtility {
         private const Int32 HWND_BROADCAST = 0xffff;

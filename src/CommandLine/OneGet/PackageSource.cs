@@ -15,6 +15,7 @@
 namespace NuGet.OneGet {
     using System.IO;
     using global::NuGet;
+    using global::OneGet.ProviderSDK;
 
     internal class PackageSource {
         internal string Name {get; set;}
