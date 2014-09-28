@@ -90,15 +90,6 @@ namespace NuGet.OneGet {
 
 #endif
 
-        internal static void Invoke(ChocolateyRequest request, string script) {
-            using (var p = PowerShell.Create()) {
-                p.Runspace.SessionStateProxy.SetVariable("request", request);
-                p.AddScript(ChocolateyRequest.HelperModuleText, false);
-                p.AddScript(script);
-                foreach (var result in p.Invoke()) {
-                    // dunno what to do with the result yet.
-                }
-            }
-        }
+       
     }
 }

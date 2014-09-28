@@ -29,7 +29,7 @@ namespace NuGet.OneGet {
                 { "schemes", new[] { "http", "https", "file" }
                 }, { "extensions", new[] { "nupkg" }
                 }, { "magic-signatures", _empty },
-                { global::OneGet.ProviderSDK.Constants.Features.AutomationOnly, _empty }
+                // { global::OneGet.ProviderSDK.Constants.Features.AutomationOnly, _empty }
             };
         }
 
@@ -39,11 +39,21 @@ namespace NuGet.OneGet {
             }
         }
 
-        public void InitializeProvider(object dynamicInterface, RequestImpl requestImpl) {
-            RequestExtensions.RemoteDynamicInterface = dynamicInterface;
+        public void InitializeProvider(RequestImpl requestImpl) {
             _features.AddOrSet("exe", new[] {
                 Assembly.GetAssembly(typeof (global::NuGet.PackageSource)).Location
             });
+
+            // create a strongly-typed request object.
+            using (var request = requestImpl.As<NuGetRequest>()) {
+                // Nice-to-have put a debug message in that tells what's going on.
+                request.Debug("Calling '{0}::InitializeProvider'", ProviderName);
+
+                // Check to see if we're ok to proceed.
+                if (!request.IsReady(false)) {
+                    return;
+                }
+            }
         }
 
         public override void GetDynamicOptions(string category, RequestImpl requestImpl) {

@@ -14,45 +14,34 @@
 
 namespace NuGet.OneGet {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
+    using System.Management.Automation;
     using System.Reflection;
-    using System.Runtime.Remoting;
-    using System.Runtime.Remoting.Channels;
-    using System.Runtime.Remoting.Channels.Ipc;
-    using System.Security.AccessControl;
     using System.Security.Principal;
     using System.Xml.Linq;
     using System.Xml.XPath;
     using global::OneGet.ProviderSDK;
     using Microsoft.Win32;
-
-    public interface IChocolateyRequest {
-        
-    }
+    using ErrorCategory = global::OneGet.ProviderSDK.ErrorCategory;
 
     public abstract class ChocolateyRequest : BaseRequest {
-
-        public override string ProviderName { get {
-            return "Chocolatey";
-        } }
-
-        internal static ImplictLazy<string> ChocolateyModuleFolder = new ImplictLazy<string>( () => Path.GetFullPath(Assembly.GetExecutingAssembly().Location));
+        internal static ImplictLazy<string> ChocolateyModuleFolder = new ImplictLazy<string>(() => Path.GetFullPath(Assembly.GetExecutingAssembly().Location));
         internal static ImplictLazy<string> ChocolateyModuleFile = new ImplictLazy<string>(() => Path.Combine(ChocolateyModuleFolder, "Chocolatey.psd1"));
         internal static ImplictLazy<string> EtcPath = new ImplictLazy<string>(() => Path.Combine(ChocolateyModuleFolder, "etc"));
         internal static ImplictLazy<string> ChocolateyConfigPath = new ImplictLazy<string>(() => Path.Combine(RootInstallationPath, "chocolateyinstall", "Chocolatey.config"));
-        internal static ImplictLazy<string> SystemDrive = new ImplictLazy<string>(() => {
-                var drive = Environment.GetEnvironmentVariable("SystemDrive");
 
-                if (string.IsNullOrEmpty(drive)) {
-                    return "c:\\";
-                }
-                return drive + "\\";
-            });
+        internal static ImplictLazy<string> SystemDrive = new ImplictLazy<string>(() => {
+            var drive = Environment.GetEnvironmentVariable("SystemDrive");
+
+            if (string.IsNullOrEmpty(drive)) {
+                return "c:\\";
+            }
+            return drive + "\\";
+        });
 
         internal static ImplictLazy<string> RootInstallationPath = new ImplictLazy<string>(() => {
             var rip = Environment.GetEnvironmentVariable("ChocolateyPath");
@@ -78,21 +67,14 @@ namespace NuGet.OneGet {
         });
 
         internal static ImplictLazy<string> HelperModuleText = new ImplictLazy<string>(() => {
-                var asm = Assembly.GetExecutingAssembly();
+            var asm = Assembly.GetExecutingAssembly();
 
-                var resource = asm.GetManifestResourceNames().FirstOrDefault(each => each.EndsWith("ChocolateyHelpers.psm1", StringComparison.OrdinalIgnoreCase));
-                if (resource != null) {
-                    return asm.GetManifestResourceStream(resource).ReadToEnd();
-                }
+            var resource = asm.GetManifestResourceNames().FirstOrDefault(each => each.EndsWith("ChocolateyHelpers.psm1", StringComparison.OrdinalIgnoreCase));
+            if (resource != null) {
+                return asm.GetManifestResourceStream(resource).ReadToEnd();
+            }
             return string.Empty;
         });
-      
-        internal bool ForceX86 {
-            [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
-            get {
-                return GetOptionValue("ForceX86").IsTrue();
-            }
-        }
 
         public static ImplictLazy<bool> IsElevated = new ImplictLazy<bool>(() => {
             var id = WindowsIdentity.GetCurrent();
@@ -100,6 +82,18 @@ namespace NuGet.OneGet {
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         });
 
+        public override string ProviderName {
+            get {
+                return "Chocolatey";
+            }
+        }
+
+        internal bool ForceX86 {
+            [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
+            get {
+                return GetOptionValue("ForceX86").IsTrue();
+            }
+        }
 
         internal override string Destination {
             get {
@@ -119,8 +113,7 @@ namespace NuGet.OneGet {
                             IsRegistered = true,
                             IsValidated = each.Attributes("validated").Any() && each.Attribute("validated").Value.IsTrue(),
                         }, StringComparer.OrdinalIgnoreCase);
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     e.Dump(this);
                 }
                 return new Dictionary<string, PackageSource>(StringComparer.OrdinalIgnoreCase) {
@@ -137,9 +130,68 @@ namespace NuGet.OneGet {
             }
         }
 
+        internal XDocument Config {
+            get {
+                try {
+                    var doc = XDocument.Load(ChocolateyConfigPath);
+                    if (doc.Root != null && doc.Root.Name == "chocolatey") {
+                        return doc;
+                    }
+
+                    // doc root isn't right. make a new one!
+                } catch {
+                    // bad doc 
+                }
+                return XDocument.Load(new MemoryStream(@"<?xml version=""1.0""?>
+<chocolatey>
+    <useNuGetForSources>false</useNuGetForSources>
+    <sources>
+        <source id=""chocolatey"" value=""http://chocolatey.org/api/v2/"" />
+    </sources>
+</chocolatey>
+".ToByteArray()));
+            }
+            set {
+                Verbose("Saving Chocolatey Config", ChocolateyConfigPath);
+
+                if (value == null) {
+                    return;
+                }
+
+                ProviderServices.CreateFolder(Path.GetDirectoryName(ChocolateyConfigPath), this.REQ);
+                value.Save(ChocolateyConfigPath);
+            }
+        }
+
+        internal string PackageInstallationPath {
+            get {
+                var path = Path.Combine(RootInstallationPath, "lib");
+                if (!Directory.Exists(path)) {
+                    ProviderServices.CreateFolder(path, this.REQ);
+                }
+                return path;
+            }
+        }
+
+        internal string PackageExePath {
+            get {
+                var path = Path.Combine(RootInstallationPath, "bin");
+                if (!Directory.Exists(path)) {
+                    ProviderServices.CreateFolder(path, this.REQ);
+                }
+                return Path.Combine(RootInstallationPath, "bin");
+            }
+        }
+
+        protected override string ConfigurationFileLocation {
+            get {
+                return ChocolateyConfigPath;
+            }
+        }
+
         internal override void RemovePackageSource(string id) {
             var config = Config;
-            var source = config.XPathSelectElements(string.Format("/chocolatey/sources/source[@id='{0}']",id)).FirstOrDefault();
+            var source = config.XPathSelectElements(string.Format("/chocolatey/sources/source[@id='{0}']", id)).FirstOrDefault();
             if (source != null) {
                 source.Remove();
                 Config = config;
@@ -169,8 +221,7 @@ namespace NuGet.OneGet {
             }
         }
 
-
-        public void GenerateBins(string pkgPath) {
+        public bool GenerateBins(string pkgPath) {
             var exes = Directory.EnumerateFiles(pkgPath, "*.exe", SearchOption.AllDirectories);
             foreach (var exe in exes) {
                 if (File.Exists((exe + ".ignore"))) {
@@ -182,86 +233,72 @@ namespace NuGet.OneGet {
                 }
                 GenerateConsoleBin(exe);
             }
+            return true;
         }
 
-        internal override void PostInstall(PackageItem packageItem) {
+        internal override bool PostInstall(PackageItem packageItem) {
             // run the install script
             var pkgPath = packageItem.FullPath;
             var scripts = Directory.EnumerateFiles(pkgPath, "chocolateyInstall.ps1", SearchOption.AllDirectories);
             var script = scripts.FirstOrDefault();
             if (script != null) {
-                // Error("Missing chocolateyinstall.ps1", pkgPath, null);
-                // break;
-                // Now for the script.
-                // InvokeChocolateyScript(pkgPath, packageImte., script);
+                try {
 
+                    Environment.SetEnvironmentVariable("chocolateyPackageFolder", pkgPath);
+                    Environment.SetEnvironmentVariable("chocolateyInstallArguments", "");
+                    Environment.SetEnvironmentVariable("chocolateyInstallOverride", "");
 
-                Environment.SetEnvironmentVariable("chocolateyPackageFolder", pkgPath);
-                Environment.SetEnvironmentVariable("chocolateyInstallArguments", "");
-                Environment.SetEnvironmentVariable("chocolateyInstallOverride", "");
-
-                InvokeChocolateyScript(script, pkgPath);
-
-                Environment.SetEnvironmentVariable("chocolateyPackageFolder", null);
-                Environment.SetEnvironmentVariable("chocolateyInstallArguments", null);
-                Environment.SetEnvironmentVariable("chocolateyInstallOverride", null);
+                    InvokeChocolateyScript(script, pkgPath);
+                } catch (Exception e) {
+                    e.Dump(this);
+                    return false;
+                } finally {
+                    Environment.SetEnvironmentVariable("chocolateyPackageFolder", null);
+                    Environment.SetEnvironmentVariable("chocolateyInstallArguments", null);
+                    Environment.SetEnvironmentVariable("chocolateyInstallOverride", null);
+                }
             }
 
             // Now handle 'bins'
-            GenerateBins(pkgPath);
-
-
+            return GenerateBins(pkgPath);
         }
 
-        internal override void PostUninstall(PackageItem packageItem) {
+        internal override bool PostUninstall(PackageItem packageItem) {
             // run the uninstall script
+            return true;
         }
 
-        internal override void PreInstall(PackageItem packageItem) {
+        internal override bool PreInstall(PackageItem packageItem) {
             // run the install script
+            return true;
         }
 
-        internal override void PreUninstall(PackageItem packageItem) {
+        internal override bool PreUninstall(PackageItem packageItem) {
             // run the uninstall script
+            return true;
         }
 
-        internal XDocument Config {
-            get {
-                try {
-                    var doc = XDocument.Load(ChocolateyConfigPath);
-                    if (doc.Root != null && doc.Root.Name == "chocolatey") {
-                        return doc;
+        internal bool Invoke(string script) {
+            using (var p = PowerShell.Create()) {
+                p.Runspace.SessionStateProxy.SetVariable("request", this);
+                p.AddScript(HelperModuleText, false);
+                p.AddScript(script);
+                
+                foreach (var result in p.Invoke().Where(result => result != null)) {
+                    try {
+                        Verbose(result.ToString());
+                    } catch {
+                        // no worries.
                     }
-
-                    // doc root isn't right. make a new one!
                 }
-                catch {
-                    // bad doc 
+                if (p.HadErrors) {
+                    return false;
                 }
-                return XDocument.Load(new MemoryStream(@"<?xml version=""1.0""?>
-<chocolatey>
-    <useNuGetForSources>false</useNuGetForSources>
-    <sources>
-        <source id=""chocolatey"" value=""http://chocolatey.org/api/v2/"" />
-    </sources>
-</chocolatey>
-".ToByteArray()));
             }
-            set {
-                Verbose("Saving Chocolatey Config", ChocolateyConfigPath);
-
-                if (value == null) {
-                    return;
-                }
-
-                ProviderServices.CreateFolder(Path.GetDirectoryName(ChocolateyConfigPath), this.REQ);
-                value.Save(ChocolateyConfigPath);
-            }
+            return true;
         }
-       
 
-        
-        internal void InvokeChocolateyScript(string path,string workingDirectory) {
+        internal bool InvokeChocolateyScript(string path, string workingDirectory) {
             var pwd = Directory.GetCurrentDirectory();
 
             try {
@@ -272,83 +309,14 @@ namespace NuGet.OneGet {
                 }
                 if (File.Exists(path)) {
                     path = Path.GetFullPath(path);
-                    ChocolateyScript.Invoke(this, path);    
+                    return Invoke(path);
                 }
             } catch (Exception e) {
                 e.Dump(this);
+            } finally {
+                Directory.SetCurrentDirectory(pwd);
             }
-
-            Directory.SetCurrentDirectory(pwd); 
-        }
-
-        internal static int InvokeChocolateyScriptForRPC(string remoteUri, string script) {
-            // connect to the server process first
-            var properties = new Hashtable();
-            properties.Add("portName", "Chocolatey");
-            properties.Add("authorizedGroup", "Everyone");
-            properties.Add("secure", "false");
-            properties.Add("exclusiveAddressUse", "true");
-            properties.Add("strictBinding", "false");
-            properties.Add("name", "ChocolateyRequest");
-            properties.Add("includeVersions", "false");
-
-            var clientChannel = new IpcClientChannel(properties,new BinaryClientFormatterSinkProvider(properties,null));
-            ChannelServices.RegisterChannel(clientChannel, true);
-            
-            var req=(Request)RemotingServices.Connect(typeof (Request), remoteUri, null);
-            Debugger.Launch();
-
-            req.Debug("See, it does work {0} {1} {2}", "A", "B", "C");
-            // ChocolateyScript.Invoke(req,script.FromBase64());
-            return 0;
-        }
-
-        /// <summary>
-        /// This creates an RPC server that has endpoints for all the HostAPIs, then creates an elevated process that can call back into this process to report progress.
-        /// 
-        /// 
-        /// </summary>
-        /// <param name="script"></param>
-        /// <returns></returns>
-        internal int InvokeElevatedViaRPC(string script) {
-
-            // start new host process, create 
-
-
-            var guid = Guid.NewGuid();
-
-            var properties = new Hashtable();
-            properties.Add("portName","Chocolatey");
-            properties.Add("authorizedGroup", "Everyone");
-            properties.Add("secure", "false");
-            properties.Add("exclusiveAddressUse", "true");
-            properties.Add("strictBinding", "false");
-            properties.Add("name", "ChocolateyRequest");
-            properties.Add("includeVersions", "false");
-
-            // set up the server IPC channel
-            var serverChannel = new IpcServerChannel(properties, new BinaryServerFormatterSinkProvider(properties,null));
-            
-            ChannelServices.RegisterChannel(serverChannel, true);
-            // var instance = new DebTest(this);
-            var instance = this;
-            var objRef = RemotingServices.Marshal(instance, "Request",typeof(Request));
-
-            var remoteUris = serverChannel.GetUrlsForUri("Request");
-            var uri = remoteUris[0];
-            // Create the client elevated
-            var process = AsyncProcess.Start(new ProcessStartInfo {
-                FileName = NuGetExePath,
-                Arguments = string.Format("-rpc {0} -script {1}", uri, script.ToBase64()),
-                // WorkingDirectory = workingDirectory,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                Verb = "runas",
-            });
-
-            process.WaitForExit();
-
-            RemotingServices.Disconnect(this);
-            return 0;
+            return false;
         }
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
@@ -357,12 +325,12 @@ namespace NuGet.OneGet {
                 url = url64bit;
             }
 
-            Verbose("GetChocolateyWebFile", "{0} => {1}", packageName, url);
+            Verbose("GetChocolateyWebFile {0} => {1}", packageName, url);
 
             var uri = new Uri(url);
 
             ProviderServices.DownloadFile(uri, fileFullPath, this.REQ);
-            if (string.IsNullOrEmpty(fileFullPath)) {
+            if (string.IsNullOrEmpty(fileFullPath) || !ProviderServices.FileExists(fileFullPath)) {
                 throw new Exception("Failed to download file {0}".format(url));
             }
 
@@ -376,7 +344,7 @@ namespace NuGet.OneGet {
             switch (fileType.ToLowerInvariant()) {
                 case "msi":
                 case "msu":
-                    return ProviderServices.Install(file,silentArgs, this.REQ);
+                    return ProviderServices.Install(file, silentArgs, this.REQ);
 
                 case "exe":
                     return StartChocolateyProcessAsAdmin("{0}".format(silentArgs), file, true, true, validExitCodes, workingDirectory);
@@ -387,8 +355,8 @@ namespace NuGet.OneGet {
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
         public bool InstallChocolateyPackage(string packageName, string fileType, string silentArgs, string url, string url64bit, int[] validExitCodes, string workingDirectory) {
             try {
-                
-                var tempFolder = Path.GetTempPath();;
+                var tempFolder = Path.GetTempPath();
+                ;
                 var chocTempDir = Path.Combine(tempFolder, "chocolatey");
                 var pkgTempDir = Path.Combine(chocTempDir, packageName);
                 ProviderServices.Delete(pkgTempDir, this.REQ);
@@ -398,7 +366,7 @@ namespace NuGet.OneGet {
                     url = url64bit;
                 }
 
-                string localFile = ProviderServices.CanonicalizePath(url,workingDirectory);
+                var localFile = ProviderServices.CanonicalizePath(url, workingDirectory);
 
                 // check to see if the url is a local file 
                 if (!ProviderServices.FileExists(localFile)) {
@@ -408,7 +376,7 @@ namespace NuGet.OneGet {
                 if (string.IsNullOrEmpty(localFile)) {
                     localFile = Path.Combine(pkgTempDir, "{0}install.{1}".format(packageName, fileType));
                     if (!GetChocolateyWebFile(packageName, localFile, url, url64bit)) {
-                        throw new Exception(string.Format( "Download failed {0} {1} {2}",url, url64bit, localFile));
+                        throw new Exception(string.Format("Download failed {0} {1} {2}", url, url64bit, localFile));
                     }
                 }
 
@@ -417,11 +385,10 @@ namespace NuGet.OneGet {
                     return true;
                 }
                 throw new Exception("Failed Install.");
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.Dump(this);
                 Error(ErrorCategory.InvalidResult, packageName, Constants.Messages.DependentPackageFailedInstall, packageName);
-                
+
                 throw new Exception("Failed Installation");
             }
         }
@@ -453,33 +420,10 @@ namespace NuGet.OneGet {
             EnvironmentUtility.Rehash();
         }
 
-        internal string PackageInstallationPath {
-            get {
-                var path = Path.Combine(RootInstallationPath, "lib");
-                if (!Directory.Exists(path)) {
-                    ProviderServices.CreateFolder(path, this.REQ);
-                }
-                return path;
-            }
-        }
-
-
-        internal string PackageExePath {
-            get {
-                var path = Path.Combine(RootInstallationPath, "bin");
-                if (!Directory.Exists(path)) {
-                    ProviderServices.CreateFolder(path, this.REQ);
-                }
-                return Path.Combine(RootInstallationPath, "bin");
-            }
-        }
-
-
         public string GetBatFileLocation(string exe, string name) {
             if (string.IsNullOrEmpty(name)) {
                 return Path.Combine(PackageExePath, Path.GetFileNameWithoutExtension(exe) + ".bat");
-            }
-            else {
+            } else {
                 return Path.Combine(PackageExePath, Path.GetFileNameWithoutExtension(name) + ".bat");
             }
         }
@@ -504,7 +448,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
         }
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
-        public void RemoveBins(string pkgPath) {
+        public bool RemoveBins(string pkgPath) {
             var exes = Directory.EnumerateFiles(pkgPath, "*.exe", SearchOption.AllDirectories);
             foreach (var exe in exes) {
                 if (File.Exists(exe + ".ignore")) {
@@ -516,12 +460,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 }
                 RemoveConsoleBin(exe);
             }
-        }
-
-        protected override string ConfigurationFileLocation {
-            get {
-                return ChocolateyConfigPath;
-            }
+            return true;
         }
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
@@ -533,7 +472,6 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
         public void RemoveGuiBin(string exe, string name = null) {
             ProviderServices.Delete(GetBatFileLocation(exe, name), this.REQ);
         }
-
 
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
         public bool InstallChocolateyPowershellCommand(string packageName, string psFileFullPath, string url, string url64bit, string workingDirectory) {
@@ -569,7 +507,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                     };
                 }
                 return null;
-            }).Where( each => each != null ).OrderByDescending(each => each.Version);
+            }).Where(each => each != null).OrderByDescending(each => each.Version);
 
             var reqVsVersion = versions.FirstOrDefault();
 
@@ -666,54 +604,26 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                     var snapshot = new Snapshot(this, destination);
 
                     // UnZip(fileFullPath, destination);
-                    var files =ProviderServices.UnpackArchive(fileFullPath, destination, this.REQ).ToArray();
+                    var files = ProviderServices.UnpackArchive(fileFullPath, destination, this.REQ).ToArray();
 
                     snapshot.WriteFileDiffLog(zipExtractLogFullPath);
-                }
-                else {
+                } else {
                     var files = ProviderServices.UnpackArchive(fileFullPath, destination, this.REQ).ToArray();
                 }
                 return destination;
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.Dump(this);
                 Verbose("PackageInstallation Failed {0}", packageName);
                 throw new Exception("Failed Installation");
             }
         }
-
-        /*
-        private void UnZip(string zipFile, string destination) {
-
-            var zip = ZipArchive.OpenOnFile(zipFile, FileMode.Open, FileAccess.Read, FileShare.Read, true);
-            foreach (var file in zip.Files) {
-
-                var fName = Path.Combine(destination, file.Name);
-                if (File.Exists(fName) || Directory.Exists(fName)) {
-                    ProviderServices.DeleteFile(fName, this.REQ);
-                }
-
-                if (file.FolderFlag) {
-                    ProviderServices.CreateFolder(fName, this.REQ);
-                    continue;
-                }
-
-                if (file.VolumeLabelFlag) {
-                    continue;
-                }
-
-                using (var output = File.Create(fName)) {
-                    file.GetStream(FileMode.Open, FileAccess.Read).CopyTo(output);
-                }
-            }
-        }
-         * */
-
+       
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode", Justification = "Required.")]
         public bool InstallChocolateyZipPackage(string packageName, string url, string unzipLocation, string url64bit, string specificFolder, string workingDirectory) {
             Verbose("InstallChocolateyZipPackage", packageName);
             try {
-                var tempFolder = Path.GetTempPath();;
+                var tempFolder = Path.GetTempPath();
+                ;
                 var chocTempDir = Path.Combine(tempFolder, "chocolatey");
                 var pkgTempDir = Path.Combine(chocTempDir, packageName);
                 ProviderServices.Delete(pkgTempDir, this.REQ);
@@ -728,8 +638,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                     throw new Exception("Failed Install.");
                 }
                 throw new Exception("Failed Download.");
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.Dump(this);
                 Verbose("PackageInstallation Failed {0}", packageName);
                 throw new Exception("Failed Installation");
@@ -747,8 +656,7 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                         ProviderServices.DeleteFile(file, this.REQ);
                     }
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.Dump(this);
                 Verbose("uninstall failure {0}", packageName);
             }
@@ -799,13 +707,16 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 if (IsElevated) {
                     Verbose("Already Elevated", "Running PowerShell script in process");
                     // in proc, we're already good.
-                    ChocolateyScript.Invoke(this, statements);
-                    return true;
+                    return Invoke(statements);
                 }
 
                 Verbose("Not Elevated", "Running PowerShell script in new process");
                 // otherwise setup a new proc
-                InvokeElevatedViaRPC(statements);
+                if (!ProviderServices.ExecuteElevatedAction(ProviderName, statements, this.REQ)) {
+                    Debug("Error during elevation");
+                    return false;
+                }
+                return true;
             }
 
             // just a straight exec from here.
@@ -833,23 +744,12 @@ start """" ""%DIR%{0}"" %*".format(PackageExePath.RelativePathTo(exe)));
                 }
                 Verbose("Process Failed {0}", exeToRun);
                 throw new Exception("Process Exited with non-successful exit code {0} : {1} ".format(exeToRun, process.ExitCode));
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.Dump(this);
 
                 Error("Process Execution Failed", "'{0}' -- {1}", exeToRun, e.Message);
                 throw e;
             }
-        }
-    }
-
-    public class DebTest : MarshalByRefObject {
-        private ChocolateyRequest _request;
-        public DebTest(ChocolateyRequest req) {
-            _request = req;
-        }
-        public void Debug(string text, params object[] args) {
-            _request.Debug(text, args);
         }
     }
 }

@@ -184,7 +184,7 @@ namespace NuGet.OneGet {
 
                         validated = request.ValidateSourceLocation(location);
 
-                        if (validated) {
+                        if (!validated) {
                             request.Error(ErrorCategory.InvalidData, name ?? location, Constants.Messages.SourceLocationNotValid, location);
                             // we're done here.
                             return;
@@ -351,12 +351,20 @@ namespace NuGet.OneGet {
                     }
 
                     var dependencies = request.GetUninstalledPackageDependencies(pkgRef).Reverse().ToArray();
+                    int progressId = 0;
 
+                    if (dependencies.Length > 0) {
+                        progressId = request.StartProgress(0, "Installing package '{0}'", pkgRef.GetCanonicalId(request));
+                    }
+                    var n = 0;
                     foreach (var d in dependencies) {
+                        request.Progress(progressId, (n*100/(dependencies.Length+1)) + 1, "Installing dependent package '{0}'", d.GetCanonicalId(request));
                         if (!request.InstallSinglePackage(d)) {
                             request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.Messages.DependentPackageFailedInstall, d.GetCanonicalId(request));
                             return;
                         }
+                        n++;
+                        request.Progress(progressId, (n * 100 / (dependencies.Length + 1)) , "Installed dependent package '{0}'", d.GetCanonicalId(request));
                     }
 
                     // got this far, let's install the package we came here for.
@@ -365,8 +373,10 @@ namespace NuGet.OneGet {
                         // roll that back out everything we did install.
                         // and get out of here.
                         request.Error(ErrorCategory.InvalidResult, pkgRef.GetCanonicalId(request), Constants.Messages.PackageFailedInstall, pkgRef.GetCanonicalId(request));
-
+                        request.CompleteProgress(progressId, false);
                     }
+                    request.CompleteProgress(progressId, true);
+
                 }
             }
             catch (Exception e) {

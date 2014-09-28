@@ -1033,16 +1033,20 @@ namespace NuGet.OneGet {
             }).OrderByDescending(each => each.Package.Version);
         }
 
-        internal virtual void PreInstall(PackageItem packageItem) {
+        internal virtual bool PreInstall(PackageItem packageItem) {
+            return true;
         }
 
-        internal virtual void PostInstall(PackageItem packageItem) {
+        internal virtual bool PostInstall(PackageItem packageItem) {
+            return true;
         }
 
-        internal virtual void PreUninstall(PackageItem packageItem) {
+        internal virtual bool PreUninstall(PackageItem packageItem) {
+            return true;
         }
 
-        internal virtual void PostUninstall(PackageItem packageItem) {
+        internal virtual bool PostUninstall(PackageItem packageItem) {
+            return true;
         }
 
         internal bool InstallSinglePackage(PackageItem packageItem) {
@@ -1062,7 +1066,12 @@ namespace NuGet.OneGet {
                         }
 
                         // run any extra steps 
-                        PostInstall(installedPackage);
+                        if (!PostInstall(installedPackage)) {
+                            // package failed installation. uninstall it.
+                            UninstallPackage(installedPackage);
+                            
+                            return false;
+                        }
 
                         YieldPackage(packageItem, packageItem.PackageSource.Name);
                         // yay!
@@ -1086,15 +1095,18 @@ namespace NuGet.OneGet {
         }
 
 
-        internal void UninstallPackage(PackageItem pkg) {
+        internal bool UninstallPackage(PackageItem pkg) {
             var dir = pkg.InstalledDirectory;
 
             if (!String.IsNullOrEmpty(dir) && Directory.Exists(dir)) {
-                PreUninstall(pkg);
-                ProviderServices.DeleteFolder(pkg.InstalledDirectory, this.REQ);
+                if (PreUninstall(pkg)) {
+                    ProviderServices.DeleteFolder(pkg.InstalledDirectory, this.REQ);
+                }
+                var result = PostUninstall(pkg);
                 YieldPackage(pkg, pkg.Id);
-                PostUninstall(pkg);
+                return result;
             }
+            return true;
         }
     }
 
