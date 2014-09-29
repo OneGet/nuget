@@ -24,9 +24,7 @@ namespace NuGet.OneGet {
     using RequestImpl = System.MarshalByRefObject;
 
     #region copy requestextension-implementation
-/* Synced/Generated code =================================================== */
-
-    public static class RequestExtensions {
+public static class RequestExtensions {
         private static dynamic _remoteDynamicInterface;
         private static dynamic _localDynamicInterface;
 
@@ -41,7 +39,6 @@ namespace NuGet.OneGet {
             }
             return default(TSource);
         }
-
 
         public static string format(this string messageFormat, params object[] args) {
             return string.Format(messageFormat, args);
@@ -60,7 +57,7 @@ namespace NuGet.OneGet {
         }
 
         /// <summary>
-        ///  This is the Instance for DynamicInterface that we use when we're giving another AppDomain a remotable object.
+        ///     This is the Instance for DynamicInterface that we use when we're giving another AppDomain a remotable object.
         /// </summary>
         public static dynamic LocalDynamicInterface {
             get {
@@ -69,22 +66,17 @@ namespace NuGet.OneGet {
         }
 
         /// <summary>
-        /// The is the instance of the DynamicInteface service from the calling AppDomain
+        ///     The is the instance of the DynamicInteface service from the calling AppDomain
         /// </summary>
         public static dynamic RemoteDynamicInterface {
             get {
-                return _remoteDynamicInterface;
-            }
-            set {
-                if (_remoteDynamicInterface == null) {
-                    _remoteDynamicInterface = value;
-                }
+                return _remoteDynamicInterface ?? (_remoteDynamicInterface = AppDomain.CurrentDomain.GetData("DynamicInteface"));
             }
         }
 
         /// <summary>
-        /// This is called to adapt an object from a foreign app domain to a known interface
-        /// In this appDomain
+        ///     This is called to adapt an object from a foreign app domain to a known interface
+        ///     In this appDomain
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="instance"></param>
@@ -94,7 +86,7 @@ namespace NuGet.OneGet {
         }
 
         /// <summary>
-        ///  This is called to adapt and extend an object that we wish to pass to a foreign app domain
+        ///     This is called to adapt and extend an object that we wish to pass to a foreign app domain
         /// </summary>
         /// <param name="obj">The base object that we are passing</param>
         /// <param name="tInterface">the target interface (from the foreign appdomain)</param>
@@ -128,8 +120,7 @@ namespace NuGet.OneGet {
             var data = bytes.ToArray();
             try {
                 return Encoding.UTF8.GetString(data);
-            }
-            finally {
+            } finally {
                 Array.Clear(data, 0, data.Length);
             }
         }
@@ -138,8 +129,7 @@ namespace NuGet.OneGet {
             var data = bytes.ToArray();
             try {
                 return Encoding.Unicode.GetString(data);
-            }
-            finally {
+            } finally {
                 Array.Clear(data, 0, data.Length);
             }
         }
@@ -171,7 +161,7 @@ namespace NuGet.OneGet {
         }
 
         /// <summary>
-        ///     encrypts the given collection of bytes with the machine key and salt 
+        ///     encrypts the given collection of bytes with the machine key and salt
         /// </summary>
         /// <param name="binaryData"> The binary data. </param>
         /// <param name="salt"> The salt. </param>
@@ -183,8 +173,7 @@ namespace NuGet.OneGet {
             var s = salt.ToByteArray();
             try {
                 return ProtectedData.Protect(data, s, DataProtectionScope.LocalMachine);
-            }
-            finally {
+            } finally {
                 Array.Clear(data, 0, data.Length);
                 Array.Clear(s, 0, s.Length);
             }
@@ -203,8 +192,7 @@ namespace NuGet.OneGet {
             var s = salt.ToByteArray();
             try {
                 return ProtectedData.Protect(data, s, DataProtectionScope.CurrentUser);
-            }
-            finally {
+            } finally {
                 Array.Clear(data, 0, data.Length);
                 Array.Clear(s, 0, s.Length);
             }
@@ -222,8 +210,7 @@ namespace NuGet.OneGet {
             var data = (text ?? String.Empty).ToByteArray();
             try {
                 return ProtectBinaryForMachine(data, salt);
-            }
-            finally {
+            } finally {
                 Array.Clear(data, 0, data.Length);
             }
         }
@@ -240,8 +227,7 @@ namespace NuGet.OneGet {
             var data = (text ?? String.Empty).ToByteArray();
             try {
                 return ProtectBinaryForUser(data, salt);
-            }
-            finally {
+            } finally {
                 Array.Clear(data, 0, data.Length);
             }
         }
@@ -261,15 +247,15 @@ namespace NuGet.OneGet {
 
             try {
                 return ProtectedData.Unprotect(binaryData.ToArray(), salt.ToByteArray(), DataProtectionScope.CurrentUser);
-            }
-            catch {
+            } catch {
                 /* suppress */
             }
             return Enumerable.Empty<byte>();
         }
 
         /// <summary>
-        ///     decrypts the given collection of bytes with the machine key and salt returns an empty collection of bytes on failure
+        ///     decrypts the given collection of bytes with the machine key and salt returns an empty collection of bytes on
+        ///     failure
         /// </summary>
         /// <param name="binaryData"> The binary data. </param>
         /// <param name="salt"> The salt. </param>
@@ -283,15 +269,15 @@ namespace NuGet.OneGet {
 
             try {
                 return ProtectedData.Unprotect(binaryData.ToArray(), salt.ToByteArray(), DataProtectionScope.LocalMachine);
-            }
-            catch {
+            } catch {
                 /* suppress */
             }
             return Enumerable.Empty<byte>();
         }
 
         /// <summary>
-        ///     decrypts the given collection of bytes with the user key and salt and returns a string from the UTF8 representation of the bytes. returns an empty string on failure
+        ///     decrypts the given collection of bytes with the user key and salt and returns a string from the UTF8 representation
+        ///     of the bytes. returns an empty string on failure
         /// </summary>
         /// <param name="binaryData"> The binary data. </param>
         /// <param name="salt"> The salt. </param>
@@ -304,7 +290,8 @@ namespace NuGet.OneGet {
         }
 
         /// <summary>
-        ///     decrypts the given collection of bytes with the machine key and salt and returns a string from the UTF8 representation of the bytes. returns an empty string on failure
+        ///     decrypts the given collection of bytes with the machine key and salt and returns a string from the UTF8
+        ///     representation of the bytes. returns an empty string on failure
         /// </summary>
         /// <param name="binaryData"> The binary data. </param>
         /// <param name="salt"> The salt. </param>
@@ -317,16 +304,15 @@ namespace NuGet.OneGet {
         }
 
         public static string ToUnsecureString(this SecureString securePassword) {
-            if (securePassword == null)
+            if (securePassword == null) {
                 throw new ArgumentNullException("securePassword");
+            }
 
-            IntPtr unmanagedString = IntPtr.Zero;
+            var unmanagedString = IntPtr.Zero;
             try {
-
                 unmanagedString = Marshal.SecureStringToGlobalAllocUnicode(securePassword);
                 return Marshal.PtrToStringUni(unmanagedString);
-            }
-            finally {
+            } finally {
                 Marshal.ZeroFreeGlobalAllocUnicode(unmanagedString);
             }
         }
@@ -353,8 +339,9 @@ namespace NuGet.OneGet {
         }
 
         public static IEnumerable<byte> ToBytes(this SecureString securePassword) {
-            if (securePassword == null)
+            if (securePassword == null) {
                 throw new ArgumentNullException("securePassword");
+            }
 
             var unmanagedString = Marshal.SecureStringToGlobalAllocUnicode(securePassword);
             var ofs = 0;

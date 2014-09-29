@@ -153,7 +153,6 @@
     <Compile Include="OneGet\NuGetRequest.cs" />
     <Compile Include="OneGet\PackageItem.cs" />
     <Compile Include="OneGet\PackageSource.cs" />
-    <Compile Include="OneGet\ProviderServicesApi.cs" />
     <Compile Include="OneGet\Request.cs" />
     <Compile Include="OneGet\Snapshot.cs" />
     <Compile Include="PackageSourceBuilder.cs" />
