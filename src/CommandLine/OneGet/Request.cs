@@ -16,12 +16,14 @@ namespace NuGet.OneGet {
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.IO.Packaging;
     using System.Linq;
     using System.Management.Automation;
     using System.Text.RegularExpressions;
     using global::OneGet.ProviderSDK;
     using ErrorCategory = global::OneGet.ProviderSDK.ErrorCategory;
     using RequestImpl = System.MarshalByRefObject;
+    using ZipPackage = NuGet.ZipPackage;
 
     public abstract class BaseRequest : Request {
         internal const string MultiplePackagesInstalledExpectedOne = "MSG:MultiplePackagesInstalledExpectedOne_package";
@@ -34,60 +36,28 @@ namespace NuGet.OneGet {
 
         protected abstract string ConfigurationFileLocation {get;}
 
-        internal string[] Tag {
-            get {
-                return GetOptionValues("Tag").ToArray();
-            }
+        public BaseRequest() {
+            Tag = new ImplictLazy<string[]>(() => GetOptionValues("Tag").ToArray());
+            Contains = new ImplictLazy<string>(() => GetOptionValue("Contains"));
+            SkipValidate = new ImplictLazy<bool>(() => GetOptionValue("SkipValidate").IsTrue());
+            AllowPrereleaseVersions = new ImplictLazy<bool>(() => GetOptionValue("AllowPrereleaseVersions").IsTrue());
+            AllVersions = new ImplictLazy<bool>(() => GetOptionValue("AllVersions").IsTrue());
+            SkipDependencies = new ImplictLazy<bool>(() => GetOptionValue("SkipDependencies").IsTrue());
+            ContinueOnFailure = new ImplictLazy<bool>(() => GetOptionValue("ContinueOnFailure").IsTrue());
+            ExcludeVersion = new ImplictLazy<bool>(() => GetOptionValue("ExcludeVersion").IsTrue());
+            PackageSaveMode = new ImplictLazy<string>(() => GetOptionValue("PackageSaveMode"));
         }
 
-        internal string Contains {
-            get {
-                return GetOptionValue("Contains");
-            }
-        }
-
-        internal bool SkipValidate {
-            get {
-                return GetOptionValue("SkipValidate").IsTrue();
-            }
-        }
-
-        internal bool AllowPrereleaseVersions {
-            get {
-                return GetOptionValue("AllowPrereleaseVersions").IsTrue();
-            }
-        }
-
-        internal bool AllVersions {
-            get {
-                return GetOptionValue("AllVersions").IsTrue();
-            }
-        }
-
-        internal bool SkipDependencies {
-            get {
-                return GetOptionValue("SkipDependencies").IsTrue();
-            }
-        }
-
-        internal bool ContinueOnFailure {
-            get {
-                return GetOptionValue("ContinueOnFailure").IsTrue();
-            }
-        }
-
-        internal bool ExcludeVersion {
-            get {
-                return GetOptionValue("ExcludeVersion").IsTrue();
-            }
-        }
-
-        internal string PackageSaveMode {
-            get {
-                return GetOptionValue("PackageSaveMode");
-            }
-        }
-
+        internal ImplictLazy<string[]> Tag;
+        internal ImplictLazy<string> Contains;
+        internal ImplictLazy<bool> SkipValidate;
+        internal ImplictLazy<bool> AllowPrereleaseVersions;
+        internal ImplictLazy<bool> AllVersions;
+        internal ImplictLazy<bool> SkipDependencies;
+        internal ImplictLazy<bool> ContinueOnFailure;
+        internal ImplictLazy<bool> ExcludeVersion;
+        internal ImplictLazy<string> PackageSaveMode;
+       
         internal abstract string Destination {get;}
 
         internal abstract IDictionary<string, PackageSource> RegisteredPackageSources {get;}
@@ -440,13 +410,15 @@ namespace NuGet.OneGet {
             }
             return SelectedSources.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered).SelectMany(source => {
                 try {
-                    Debug("Initializing Query");
                     var pkgs = source.Repository.FindPackagesById(name);
-                    Debug("Queried");
+                    
                     if (!AllVersions && (String.IsNullOrEmpty(requiredVersion) && String.IsNullOrEmpty(minimumVersion) && String.IsNullOrEmpty(maximumVersion))) {
                         pkgs = from p in pkgs where p.IsLatestVersion select p;
                     }
-                    Debug("Filtering");
+
+                    pkgs = FilterOnContains(pkgs);
+                    pkgs = FilterOnTags(pkgs);
+
                     return FilterOnVersion(pkgs, requiredVersion, minimumVersion, maximumVersion)
                         .Select(pkg => new PackageItem {
                             Package = pkg,
@@ -462,6 +434,19 @@ namespace NuGet.OneGet {
 
         internal IEnumerable<IPackage> FilterOnName(IEnumerable<IPackage> pkgs, string name) {
             return pkgs.Where(each => each.Id.IndexOf(name, StringComparison.OrdinalIgnoreCase) > -1);
+        }
+        internal IEnumerable<IPackage> FilterOnTags(IEnumerable<IPackage> pkgs) {
+            if (Tag == null || Tag.Value.Length == 0 ) {
+                return pkgs;
+            }
+            return pkgs.Where(each => Tag.Value.Any(tag => each.Tags.IndexOf(tag, StringComparison.OrdinalIgnoreCase) > -1));
+        }
+
+        internal IEnumerable<IPackage> FilterOnContains(IEnumerable<IPackage> pkgs) {
+            if (string.IsNullOrEmpty(Contains)) {
+                return pkgs;
+            }
+            return pkgs.Where(each => each.Description.IndexOf(Contains, StringComparison.OrdinalIgnoreCase) > -1 || each.Id.IndexOf(Contains, StringComparison.OrdinalIgnoreCase) > -1 );
         }
 
         internal PackageItem GetPackageByFilePath(string filePath) {
@@ -560,14 +545,18 @@ namespace NuGet.OneGet {
             }
 
             try {
-                var criteria = Contains;
+                var criteria = Contains.Value;
                 if (String.IsNullOrEmpty(criteria)) {
                     criteria = name;
                 }
-                var packages = source.Repository.GetPackages().Find(criteria);
 
-                // why does this method return less results? It looks the same to me!?
-                // var packages = repository.Search(Hint.Is() ? Hint : name);
+                if (Tag != null ) {
+                    criteria = Tag.Value.Where(tag => !string.IsNullOrEmpty(tag)).Aggregate(criteria, (current, tag) => current + " tag:" + tag);
+                }
+                
+                var src = new AggregateRepository(new IPackageRepository[] {source.Repository});
+                var packages = src.Search(criteria,AllowPrereleaseVersions);
+                // packages = packages.OrderBy(p => p.Id);
 
                 IEnumerable<IPackage> pkgs = null;
 
@@ -583,6 +572,10 @@ namespace NuGet.OneGet {
                 if (!String.IsNullOrEmpty(name)) {
                     pkgs = FilterOnName(pkgs, name);
                 }
+
+                pkgs = FilterOnTags(pkgs);
+
+                pkgs = FilterOnContains(pkgs);
 
                 return FilterOnVersion(pkgs, requiredVersion, minimumVersion, maximumVersion)
                     .Select(pkg => new PackageItem {
