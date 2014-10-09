@@ -13,22 +13,18 @@
 //  
 
 namespace NuGet.OneGet {
-    using System;
     using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
     using System.Reflection;
-    using global::NuGet;
     using global::OneGet.ProviderSDK;
-    using RequestImpl = System.Object;
+    using IRequestObject = System.Object;
 
     public class NuGetProvider : CommonProvider<NuGetRequest> {
         static NuGetProvider() {
             _features = new Dictionary<string, string[]> {
-                { "supports-powershell-modules", _empty },
-                { "schemes", new[] { "http", "https", "file" }
-                }, { "extensions", new[] { "nupkg" }
-                }, { "magic-signatures", _empty },
+                {"supports-powershell-modules", _empty},
+                {"uri-schemes", new[] {"http", "https", "file"}},
+                {"file-extensions", new[] {"nupkg"}},
+                {"magic-signatures", new[] {"50b40304"}},
                 // { global::OneGet.ProviderSDK.Constants.Features.AutomationOnly, _empty }
             };
         }
@@ -39,46 +35,45 @@ namespace NuGet.OneGet {
             }
         }
 
-        public void InitializeProvider(RequestImpl requestImpl) {
+        public void InitializeProvider(IRequestObject requestObject) {
             _features.AddOrSet("exe", new[] {
-                Assembly.GetAssembly(typeof (global::NuGet.PackageSource)).Location
+                Assembly.GetAssembly(typeof (NuGet.PackageSource)).Location
             });
 
             // create a strongly-typed request object.
-            using (var request = requestImpl.As<NuGetRequest>()) {
+            using (var request = requestObject.As<NuGetRequest>()) {
                 // Nice-to-have put a debug message in that tells what's going on.
                 request.Debug("Calling '{0}::InitializeProvider'", ProviderName);
 
                 // Check to see if we're ok to proceed.
                 if (!request.IsReady(false)) {
-                    return;
                 }
             }
         }
 
-        public override void GetDynamicOptions(string category, RequestImpl requestImpl) {
-            using (var request = requestImpl.As<NuGetRequest>()) {
+        public override void GetDynamicOptions(string category, IRequestObject requestObject) {
+            using (var request = requestObject.As<NuGetRequest>()) {
                 try {
                     request.Debug("Calling '{0}::GetDynamicOptions' '{1}'", "NuGet", category);
 
-                    switch((category??string.Empty).ToLowerInvariant()){
+                    switch ((category ?? string.Empty).ToLowerInvariant()) {
                         case "package":
-                            request.YieldDynamicOption("Tag", global::OneGet.ProviderSDK.Constants.OptionType.StringArray, false);
-                            request.YieldDynamicOption("Contains", global::OneGet.ProviderSDK.Constants.OptionType.String, false);
-                            request.YieldDynamicOption("AllowPrereleaseVersions", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("Tag", Constants.OptionType.StringArray, false);
+                            request.YieldDynamicOption("Contains", Constants.OptionType.String, false);
+                            request.YieldDynamicOption("AllowPrereleaseVersions", Constants.OptionType.Switch, false);
                             break;
 
                         case "source":
-                            request.YieldDynamicOption("ConfigFile", global::OneGet.ProviderSDK.Constants.OptionType.String, false);
-                            request.YieldDynamicOption("SkipValidate", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("ConfigFile", Constants.OptionType.String, false);
+                            request.YieldDynamicOption("SkipValidate", Constants.OptionType.Switch, false);
                             break;
 
                         case "install":
-                            request.YieldDynamicOption("Destination", global::OneGet.ProviderSDK.Constants.OptionType.Path, true);
-                            request.YieldDynamicOption("SkipDependencies", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
-                            request.YieldDynamicOption("ContinueOnFailure", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
-                            request.YieldDynamicOption("ExcludeVersion", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
-                            request.YieldDynamicOption("PackageSaveMode", global::OneGet.ProviderSDK.Constants.OptionType.String, false, new[] {
+                            request.YieldDynamicOption("Destination", Constants.OptionType.Path, true);
+                            request.YieldDynamicOption("SkipDependencies", Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("ContinueOnFailure", Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("ExcludeVersion", Constants.OptionType.Switch, false);
+                            request.YieldDynamicOption("PackageSaveMode", Constants.OptionType.String, false, new[] {
                                 "nuspec", "nupkg", "nuspec;nupkg"
                             });
                             break;
@@ -89,13 +84,9 @@ namespace NuGet.OneGet {
             }
         }
 
-
-
-
-
         /* NOT SUPPORTED BY NUGET -- AT THIS TIME 
-        public void FindPackageByUri(Uri uri, int id, RequestImpl requestImpl) {
-            using (var request =requestImpl.As<Request>()) {
+        public void FindPackageByUri(Uri uri, int id, IRequestObject requestObject) {
+            using (var request =requestObject.As<Request>()) {
                 request.Debug("Calling 'NuGet::FindPackageByUri'");
 
                 // check if this URI is a valid source
@@ -106,7 +97,5 @@ namespace NuGet.OneGet {
             }
         }
          */
-
-
     }
 }

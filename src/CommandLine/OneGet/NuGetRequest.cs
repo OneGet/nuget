@@ -64,7 +64,7 @@ namespace NuGet.OneGet {
 
                 Verbose("Saving NuGet Config {0}", ConfigurationFileLocation);
 
-                ProviderServices.CreateFolder(Path.GetDirectoryName(ConfigurationFileLocation), this.REQ);
+                CreateFolder(Path.GetDirectoryName(ConfigurationFileLocation), this.REQ);
                 value.Save(ConfigurationFileLocation);
             }
         }
@@ -141,7 +141,7 @@ namespace NuGet.OneGet {
                     }
 
                     //otherwise, use %APPDATA%/NuGet/NuGet.Config
-                    _configurationFileLocation = Path.Combine(ProviderServices.GetKnownFolder("ApplicationData", this.REQ), "NuGet", "NuGet.config");
+                    _configurationFileLocation = Path.Combine(GetKnownFolder("ApplicationData", this.REQ), "NuGet", "NuGet.config");
                 }
                 return _configurationFileLocation;
             }

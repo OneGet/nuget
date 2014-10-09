@@ -19,6 +19,7 @@ namespace NuGet.OneGet {
     using System.IO;
     using System.Linq;
     using global::OneGet.ProviderSDK;
+    using IRequestObject = System.Object;
 
     /// <summary>
     /// Chocolatey Package provider for OneGet.
@@ -27,7 +28,7 @@ namespace NuGet.OneGet {
     /// Important notes:
     ///    - Required Methods: Not all methods are required; some package providers do not support some features. If the methods isn't used or implemented it should be removed (or commented out)
     ///    - Error Handling: Avoid throwing exceptions from these methods. To properly return errors to the user, use the request.Error(...) method to notify the user of an error conditionm and then return.
-    ///    - Communicating with the HOST and CORE: each method takes a RequestImpl (in reality, an alias for System.Object), which can be used in one of two ways:
+    ///    - Communicating with the HOST and CORE: each method takes a IRequestObject (in reality, an alias for System.Object), which can be used in one of two ways:
     ///         - use the c# 'dynamic' keyword, and call functions on the object directly.
     ///         - use the <code><![CDATA[ .As<Request>() ]]></code> extension method to strongly-type it to the Request type (which calls upon the duck-typer to generate a strongly-typed wrapper).  The strongly-typed wrapper also implements several helper functions to make using the request object easier.
     /// </summary>
@@ -35,9 +36,9 @@ namespace NuGet.OneGet {
 
         static ChocolateyProvider() {
             _features = new Dictionary<string, string[]> {
-                { "schemes", new [] {"http", "https", "file"} },
-                { "extensions", new [] {"nupkg"} },
-                { "magic-signatures", _empty },
+                { "uri-schemes", new [] {"http", "https", "file"} },
+                { "file-extensions", new [] {"nupkg"} },
+                { "magic-signatures", new [] {"50b40304"} },
             };
         }
 
@@ -53,11 +54,11 @@ namespace NuGet.OneGet {
         /// <summary>
         /// Performs one-time initialization of the PROVIDER.
         /// </summary>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void InitializeProvider(Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void InitializeProvider(IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<ChocolateyRequest>()) {
+                using (var request = requestObject.As<ChocolateyRequest>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::InitializeProvider'", ProviderName);
 
@@ -76,8 +77,8 @@ namespace NuGet.OneGet {
         }
 
 
-        public override void GetDynamicOptions(string category, Object requestImpl) {
-            using (var request = requestImpl.As<ChocolateyRequest>()) {
+        public override void GetDynamicOptions(string category, IRequestObject requestObject) {
+            using (var request = requestObject.As<ChocolateyRequest>()) {
                 try {
                     request.Debug("Calling '{0}::GetDynamicOptions' '{1}'", ProviderName, category);
 
@@ -109,10 +110,10 @@ namespace NuGet.OneGet {
             }
         }
 
-        public void ExecuteElevatedAction(string payload, Object requestImpl) {
+        public void ExecuteElevatedAction(string payload, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<ChocolateyRequest>()) {
+                using (var request = requestObject.As<ChocolateyRequest>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::ExecuteElevatedAction' '{1}'", ProviderName, payload);
                     if (!request.Invoke(payload)) {

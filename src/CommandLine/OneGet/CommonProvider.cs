@@ -18,7 +18,7 @@ namespace NuGet.OneGet {
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using RequestImpl = System.Object;
+    using IRequestObject = System.Object;
     using global::OneGet.ProviderSDK;
 
     public abstract class CommonProvider<T> where T : BaseRequest {
@@ -27,7 +27,7 @@ namespace NuGet.OneGet {
 
         internal static IEnumerable<string> SupportedSchemes {
             get {
-                return _features["schemes"];
+                return _features["uri-schemes"];
             }
         }
 
@@ -46,12 +46,12 @@ namespace NuGet.OneGet {
         /// NOT IMPLEMENTED YET
         /// </summary>
         /// <param name="fastPackageReference"></param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
         /// <returns></returns>
-        public void GetPackageDetails(string fastPackageReference, Object requestImpl) {
+        public void GetPackageDetails(string fastPackageReference, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::GetPackageDetails' '{1}'", ProviderName, fastPackageReference);
 
@@ -73,11 +73,11 @@ namespace NuGet.OneGet {
         /// <summary>
         /// Returns a collection of strings to the client advertizing features this provider supports.
         /// </summary>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void GetFeatures(Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void GetFeatures(IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::GetFeatures' ", ProviderName);
 
@@ -104,8 +104,8 @@ namespace NuGet.OneGet {
         /// Returns dynamic option definitions to the HOST
         /// </summary>
         /// <param name="category">The category of dynamic options that the HOST is interested in</param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public abstract void GetDynamicOptions(string category, Object requestImpl);
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public abstract void GetDynamicOptions(string category, IRequestObject requestObject);
 
 
         /// <summary>
@@ -116,11 +116,11 @@ namespace NuGet.OneGet {
         /// <param name="name">The name of the package source. If this parameter is null or empty the PROVIDER should use the location as the name (if the PROVIDER actually stores names of package sources)</param>
         /// <param name="location">The location (ie, directory, URL, etc) of the package source. If this is null or empty, the PROVIDER should use the name as the location (if valid)</param>
         /// <param name="trusted">A boolean indicating that the user trusts this package source. Packages returned from this source should be marked as 'trusted'</param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void AddPackageSource(string name, string location, bool trusted, Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void AddPackageSource(string name, string location, bool trusted, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::AddPackageSource' '{1}','{2}','{3}'", ProviderName, name, location, trusted);
 
@@ -194,7 +194,7 @@ namespace NuGet.OneGet {
                     }
 
                     // it's good to check just before you actaully write something to see if the user has cancelled the operation
-                    if (request.IsCancelled()) {
+                    if (request.IsCanceled) {
                         return;
                     }
 
@@ -227,11 +227,11 @@ namespace NuGet.OneGet {
         /// Removes/Unregisters a package source
         /// </summary>
         /// <param name="name">The name or location of a package source to remove.</param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void RemovePackageSource(string name, Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void RemovePackageSource(string name, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::RemovePackageSource' '{1}'", ProviderName, name);
 
@@ -256,11 +256,11 @@ namespace NuGet.OneGet {
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void ResolvePackageSources(Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void ResolvePackageSources(IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::ResolvePackageSources'", ProviderName);
 
@@ -291,12 +291,12 @@ namespace NuGet.OneGet {
         /// <param name="minimumVersion"></param>
         /// <param name="maximumVersion"></param>
         /// <param name="id"></param>
-        /// <param name="requestImpl"></param>
+        /// <param name="requestObject"></param>
         /// <returns></returns>
-        public void FindPackage(string name, string requiredVersion, string minimumVersion, string maximumVersion, int id, Object requestImpl) {
+        public void FindPackage(string name, string requiredVersion, string minimumVersion, string maximumVersion, int id, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::FindPackage' '{1}','{2}','{3}','{4}'", ProviderName, requiredVersion, minimumVersion, maximumVersion, id);
 
@@ -312,12 +312,14 @@ namespace NuGet.OneGet {
                     }
 
                     // have we been cancelled?
-                    if (request.IsCancelled()) {
+                    if (request.IsCanceled) {
                         return;
                     }
 
                     // Try searching for matches and returning those.
                     request.YieldPackages(request.SearchForPackages(name, requiredVersion, minimumVersion, maximumVersion), name);
+
+                    request.Debug("Finished '{0}::FindPackage' '{1}','{2}','{3}','{4}'", ProviderName, requiredVersion, minimumVersion, maximumVersion, id);
                 }
             } catch (Exception e) {
                 // We shoudn't throw exceptions from here, it's not-optimal. And if the exception class wasn't properly Serializable, it'd cause other issues.
@@ -331,11 +333,11 @@ namespace NuGet.OneGet {
         /// 
         /// </summary>
         /// <param name="fastPackageReference"></param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void InstallPackage(string fastPackageReference, Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void InstallPackage(string fastPackageReference, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::InstallPackage' '{1}'", ProviderName, fastPackageReference);
 
@@ -392,11 +394,11 @@ namespace NuGet.OneGet {
         /// Uninstalls a package 
         /// </summary>
         /// <param name="fastPackageReference"></param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
-        public void UninstallPackage(string fastPackageReference, Object requestImpl) {
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        public void UninstallPackage(string fastPackageReference, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::UninstallPackage' '{1}'", ProviderName, fastPackageReference);
 
@@ -423,12 +425,12 @@ namespace NuGet.OneGet {
         /// </summary>
         /// <param name="fastPackageReference"></param>
         /// <param name="location"></param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
         /// <returns></returns>
-        public void DownloadPackage(string fastPackageReference, string location, Object requestImpl) {
+        public void DownloadPackage(string fastPackageReference, string location, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::DownloadPackage' '{1}','{2}'", ProviderName, fastPackageReference, location);
 
@@ -465,12 +467,12 @@ namespace NuGet.OneGet {
         /// Returns package references for all the dependent packages
         /// </summary>
         /// <param name="fastPackageReference"></param>
-        /// <param name="requestImpl">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
+        /// <param name="requestObject">An object passed in from the CORE that contains functions that can be used to interact with the CORE and HOST</param>
         /// <returns></returns>
-        public void GetPackageDependencies(string fastPackageReference, Object requestImpl) {
+        public void GetPackageDependencies(string fastPackageReference, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::GetPackageDependencies' '{1}'", ProviderName, fastPackageReference);
 
@@ -511,11 +513,11 @@ namespace NuGet.OneGet {
         /// </summary>
         /// <param name="file"></param>
         /// <param name="id"></param>
-        /// <param name="requestImpl"></param>
-        public void FindPackageByFile(string file, int id, Object requestImpl) {
+        /// <param name="requestObject"></param>
+        public void FindPackageByFile(string file, int id, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::FindPackageByFile' '{1}','{2}'", ProviderName, file, id);
 
@@ -542,11 +544,11 @@ namespace NuGet.OneGet {
         /// Gets the installed packages 
         /// </summary>
         /// <param name="name"></param>
-        /// <param name="requestImpl"></param>
-        public void GetInstalledPackages(string name, RequestImpl requestImpl) {
+        /// <param name="requestObject"></param>
+        public void GetInstalledPackages(string name, IRequestObject requestObject) {
             try {
                 // create a strongly-typed request object.
-                using (var request = requestImpl.As<T>()) {
+                using (var request = requestObject.As<T>()) {
                     // Nice-to-have put a debug message in that tells what's going on.
                     request.Debug("Calling '{0}::GetInstalledPackages' '{1}'", ProviderName, name);
 

@@ -286,7 +286,9 @@
     <Exec Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsANYCPU)" WorkingDirectory="$(OutputPath)" />
     <!-- produce another signed one if signing assembly -->
     <Exec Condition=" '$(SignASsembly)' == 'true' " Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsSignedANYCPU)" WorkingDirectory="$(OutputPath)" />
-    <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')" Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)" />
+    
+    <!-- <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')" Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)" /> -->
+    
     <!-- remove installed files -->
     <Delete Files="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe" Condition="Exists('c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe')" />
     <Delete Files="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb" Condition="Exists('c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb')" />

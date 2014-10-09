@@ -14,15 +14,17 @@
 
 namespace NuGet.OneGet {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.IO;
     using System.IO.Packaging;
     using System.Linq;
     using System.Management.Automation;
     using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
     using global::OneGet.ProviderSDK;
     using ErrorCategory = global::OneGet.ProviderSDK.ErrorCategory;
-    using RequestImpl = System.MarshalByRefObject;
+    using IRequestObject = System.MarshalByRefObject;
     using ZipPackage = NuGet.ZipPackage;
 
     public abstract class BaseRequest : Request {
@@ -496,6 +498,89 @@ namespace NuGet.OneGet {
             return SelectedSources.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered).SelectMany(source => SearchSourceForPackages(source, name, requiredVersion, minimumVersion, maximumVersion));
         }
 
+        internal class PackagesEnumerable : IEnumerable<IPackage> {
+            private IQueryable<IPackage> _packages;
+            internal PackagesEnumerable(IQueryable<IPackage> packages) {
+                _packages = packages;
+            }
+
+            public IEnumerator<IPackage> GetEnumerator() {
+                return new PackageEnumerator(_packages);
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() {
+                return GetEnumerator();
+            }
+        }
+
+        internal class PackageEnumerator : IEnumerator<IPackage> {
+            private IQueryable<IPackage> _packages;
+            private int _index;
+            private int _resultIndex;
+            private IPackage[] _page;
+            private bool _done;
+            private Task<IPackage[]> _nextSet;
+            
+            internal PackageEnumerator(IQueryable<IPackage> packages) {
+                _packages = packages;
+                Reset();
+                PullNextSet();
+            }
+
+            private void PullNextSet() {
+                _nextSet = Task.Factory.StartNew(() => {
+                    return _packages.Skip(_resultIndex).Take(40).ToArray();
+                });
+            }
+            public void Dispose() {
+                _done = true;
+            }
+
+            public bool MoveNext() {
+                
+                _index++;
+
+                if ( _index >= _page.Length && !_done) {
+                    _index = 0;
+                    // _page = _packages.Skip(_resultIndex).Take(40).ToArray();
+                    _page = _nextSet.Result;
+                    _resultIndex += _page.Length;
+                    if (_page.Length < 40) {
+                        _done = true;
+                    } else {
+                        PullNextSet();
+                    }
+                }
+
+                
+                if (_index >= _page.Length) {
+                    return false;
+                }
+                
+                return true;
+            }
+
+            public void Reset() {
+                _done = false;
+                _page = new IPackage[0];;
+                _index = -1;
+                _resultIndex = 0;
+            }
+
+            public IPackage Current {
+                get {
+                    return _page[_index];
+                }
+            }
+
+            object IEnumerator.Current {
+                get {
+                    return Current;
+                }
+            }
+        }
+
+
         private IEnumerable<PackageItem> SearchSourceForPackages(PackageSource source, string name, string requiredVersion, string minimumVersion, string maximumVersion) {
             try {
                 if (!String.IsNullOrEmpty(name) && WildcardPattern.ContainsWildcardCharacters(name)) {
@@ -553,20 +638,37 @@ namespace NuGet.OneGet {
                 if (Tag != null ) {
                     criteria = Tag.Value.Where(tag => !string.IsNullOrEmpty(tag)).Aggregate(criteria, (current, tag) => current + " tag:" + tag);
                 }
-                
-                var src = new AggregateRepository(new IPackageRepository[] {source.Repository});
-                var packages = src.Search(criteria,AllowPrereleaseVersions);
-                // packages = packages.OrderBy(p => p.Id);
+                Debug("Searching repository '{0}' for '{1}'", source.Repository.Source, criteria);
+                // var src = PackageRepositoryFactory.Default.CreateRepository(source.Repository.Source);
+                //  var src = new AggregateRepository(new IPackageRepository[] {source.Repository});
+                var src = source.Repository;
+                /*
+                IQueryable<IPackage> packages;
+                if (src is IServiceBasedRepository) {
+                    packages = (src as IServiceBasedRepository).Search(criteria, new string[0], AllowPrereleaseVersions);
+                } else {
+                    packages = src.Search(criteria, AllowPrereleaseVersions);    
+                }
+                */
 
-                IEnumerable<IPackage> pkgs = null;
+                var packages = src.Search(criteria, AllowPrereleaseVersions);
+
+               
+
+                /*
+                foreach (var p in pp) {
+                    Console.WriteLine(p.GetFullName());
+                }
+                */
+
+                // packages = packages.OrderBy(p => p.Id);
 
                 // query filtering:
                 if (!AllVersions && (String.IsNullOrEmpty(requiredVersion) && String.IsNullOrEmpty(minimumVersion) && String.IsNullOrEmpty(maximumVersion))) {
-                    pkgs = packages.FindLatestVersion();
-                } else {
-                    // post-query filtering:
-                    pkgs = packages;
+                    packages = packages.FindLatestVersion();
                 }
+
+                IEnumerable<IPackage> pkgs = new PackagesEnumerable(packages);
 
                 // if they passed a name, restrict the search things that actually contain the name in the FullName.
                 if (!String.IsNullOrEmpty(name)) {
@@ -738,43 +840,41 @@ namespace NuGet.OneGet {
         }
 
         internal bool InstallSinglePackage(PackageItem packageItem) {
-            if (ShouldProcessPackageInstall(packageItem.Id, packageItem.Version, packageItem.PackageSource.Name)) {
-                // Get NuGet to install the Package
+            // Get NuGet to install the Package
+            PreInstall(packageItem);
+            var results = NuGetInstall(packageItem);
 
-                PreInstall(packageItem);
-                var results = NuGetInstall(packageItem);
-
-                if (results.Status == InstallStatus.Successful) {
-                    foreach (var installedPackage in results[InstallStatus.Successful]) {
-                        if (!NotifyPackageInstalled(installedPackage.Id, installedPackage.Version, installedPackage.PackageSource.Name, installedPackage.FullPath)) {
-                            // the caller has expressed that they are cancelling the install.
-                            Verbose("NotifyPackageInstalled returned false--This is unexpected");
-                            // todo: we should probablty uninstall this package unless the user said leave broken stuff behind
-                            return false;
-                        }
-
-                        // run any extra steps 
-                        if (!PostInstall(installedPackage)) {
-                            // package failed installation. uninstall it.
-                            UninstallPackage(installedPackage);
-
-                            return false;
-                        }
-
-                        YieldPackage(packageItem, packageItem.PackageSource.Name);
-                        // yay!
+            if (results.Status == InstallStatus.Successful) {
+                foreach (var installedPackage in results[InstallStatus.Successful]) {
+                    if (!NotifyPackageInstalled(installedPackage.Id, installedPackage.Version, installedPackage.PackageSource.Name, installedPackage.FullPath)) {
+                        // the caller has expressed that they are cancelling the install.
+                        Verbose("NotifyPackageInstalled returned false--This is unexpected");
+                        // todo: we should probablty uninstall this package unless the user said leave broken stuff behind
+                        return false;
                     }
-                    return true;
-                }
 
-                if (results.Status == InstallStatus.AlreadyPresent) {
-                    // hmm Weird.
-                    Verbose("Skipped Package '{0} v{1}' already installed", packageItem.Id, packageItem.Version);
-                    return true;
-                }
+                    // run any extra steps 
+                    if (!PostInstall(installedPackage)) {
+                        // package failed installation. uninstall it.
+                        UninstallPackage(installedPackage);
 
-                Error(ErrorCategory.InvalidResult, packageItem.GetCanonicalId(this), MultiplePackagesInstalledExpectedOne, packageItem.GetCanonicalId(this));
+                        return false;
+                    }
+
+                    YieldPackage(packageItem, packageItem.PackageSource.Name);
+                    // yay!
+                }
+                return true;
             }
+
+            if (results.Status == InstallStatus.AlreadyPresent) {
+                // hmm Weird.
+                Verbose("Skipped Package '{0} v{1}' already installed", packageItem.Id, packageItem.Version);
+                return true;
+            }
+
+            Error(ErrorCategory.InvalidResult, packageItem.GetCanonicalId(this), MultiplePackagesInstalledExpectedOne, packageItem.GetCanonicalId(this));
+
             return false;
         }
 
@@ -787,7 +887,7 @@ namespace NuGet.OneGet {
 
             if (!String.IsNullOrEmpty(dir) && Directory.Exists(dir)) {
                 if (PreUninstall(pkg)) {
-                    ProviderServices.DeleteFolder(pkg.InstalledDirectory, this.REQ);
+                    DeleteFolder(pkg.InstalledDirectory, this.REQ);
                 }
                 var result = PostUninstall(pkg);
                 YieldPackage(pkg, pkg.Id);
