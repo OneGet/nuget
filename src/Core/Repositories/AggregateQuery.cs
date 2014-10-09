@@ -261,8 +261,7 @@ namespace NuGet
             IQueryable<TVal> newQuery = queryable.Provider.CreateQuery<TVal>(expression);
 
             // Create the query and only get up to the query cache size
-            // return new BufferedEnumerable<TVal>(newQuery, QueryCacheSize);
-            return newQuery;
+            return new BufferedEnumerable<TVal>(newQuery, QueryCacheSize);
         }
 
         private static TResult Execute<TResult>(IQueryable queryable, Expression expression)
