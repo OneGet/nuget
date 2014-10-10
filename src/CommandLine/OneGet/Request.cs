@@ -374,6 +374,8 @@ namespace NuGet.OneGet {
                     if (pkg.Package.Owners.Any(owner => !YieldEntity(pkg.FastPath, owner.Trim(), owner.Trim(), "owner", null))) {
                         return false;
                     }
+                } else {
+                    return false;
                 }
             } catch (Exception e) {
                 e.Dump(this);
