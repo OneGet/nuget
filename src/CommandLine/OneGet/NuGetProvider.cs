@@ -21,10 +21,10 @@ namespace NuGet.OneGet {
     public class NuGetProvider : CommonProvider<NuGetRequest> {
         static NuGetProvider() {
             _features = new Dictionary<string, string[]> {
-                {"supports-powershell-modules", _empty},
-                {"uri-schemes", new[] {"http", "https", "file"}},
-                {"file-extensions", new[] {"nupkg"}},
-                {"magic-signatures", new[] {"50b40304"}},
+                { Constants.Features.SupportsPowerShellModules, _empty},
+                { Constants.Features.SupportedSchemes, new [] {"http", "https", "file"} },
+                { Constants.Features.SupportedExtensions, new [] {"nupkg"} },
+                { Constants.Features.MagicSignatures, new [] {Constants.Signatures.Zip } },
                 // { global::OneGet.ProviderSDK.Constants.Features.AutomationOnly, _empty }
             };
         }

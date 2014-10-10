@@ -27,7 +27,7 @@ namespace NuGet.OneGet {
 
         internal static IEnumerable<string> SupportedSchemes {
             get {
-                return _features["uri-schemes"];
+                return _features[Constants.Features.SupportedSchemes];
             }
         }
 

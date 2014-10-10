@@ -279,7 +279,7 @@ namespace NuGet.OneGet {
         }
 
         internal bool Invoke(string script) {
-            using (var p = PowerShell.Create()) {
+            using (var p = PowerShell.Create(RunspaceMode.NewRunspace)) {
                 p.Runspace.SessionStateProxy.SetVariable("request", this);
                 p.AddScript(HelperModuleText, false);
                 p.AddScript(script);

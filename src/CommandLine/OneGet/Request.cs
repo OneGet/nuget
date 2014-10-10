@@ -47,7 +47,13 @@ namespace NuGet.OneGet {
             SkipDependencies = new ImplictLazy<bool>(() => GetOptionValue("SkipDependencies").IsTrue());
             ContinueOnFailure = new ImplictLazy<bool>(() => GetOptionValue("ContinueOnFailure").IsTrue());
             ExcludeVersion = new ImplictLazy<bool>(() => GetOptionValue("ExcludeVersion").IsTrue());
-            PackageSaveMode = new ImplictLazy<string>(() => GetOptionValue("PackageSaveMode"));
+            PackageSaveMode = new ImplictLazy<string>(() => {
+                var sm = GetOptionValue("PackageSaveMode");
+                if (string.IsNullOrEmpty(sm)) {
+                    sm = "nupkg";
+                }
+                return sm;
+            } );
         }
 
         internal ImplictLazy<string[]> Tag;
@@ -763,7 +769,7 @@ namespace NuGet.OneGet {
 
             using (
                 var p = AsyncProcess.Start(NuGetExePath,
-                    String.Format(@"install ""{0}"" -Version ""{1}"" -Source ""{2}"" -PackageSaveMode ""{4}""  -OutputDirectory ""{3}"" -Verbosity detailed {5}", item.Id, item.Version, item.PackageSource.Location, Destination, PackageSaveMode,
+                    String.Format(@"install ""{0}"" -Version ""{1}"" -Source ""{2}"" -PackageSaveMode ""{4}""  -OutputDirectory ""{3}"" -Verbosity detailed {5}", item.Id, item.Version, item.PackageSource.Location, Destination, PackageSaveMode.Value,
                         ExcludeVersion ? "-ExcludeVersion" : ""))
                 ) {
                 foreach (var l in p.StandardOutput) {
