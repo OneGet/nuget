@@ -619,7 +619,7 @@ namespace NuGet.OneGet {
                                 return packageDetails[0];
                             }
                             return null;
-                        }).Where(each => each != null).ToArray();
+                        }).Where(each => each != null).Distinct().ToArray();
 
                         foreach (var l in p.StandardError.Where(l => !String.IsNullOrEmpty(l))) {
                             Warning("NuGet: {0}", l);
