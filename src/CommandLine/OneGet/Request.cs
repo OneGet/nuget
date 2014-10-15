@@ -619,18 +619,21 @@ namespace NuGet.OneGet {
                                 return packageDetails[0];
                             }
                             return null;
-                        }).Where(each => each != null).Distinct().ToArray();
+                        }).Where(each => each != null).ToArray();
 
                         foreach (var l in p.StandardError.Where(l => !String.IsNullOrEmpty(l))) {
                             Warning("NuGet: {0}", l);
                         }
                     }
-                    return FilterOnVersion(source.Repository.FindPackages(packageIds), requiredVersion, minimumVersion, maximumVersion)
+
+                    return packageIds.SelectMany(packageId => SearchSourceForPackages(source, packageId, requiredVersion, minimumVersion, maximumVersion));
+                    // return SearchSourceForPackages(source.Location, requiredVersion, minimumVersion, maximumVersion);
+                    /* return FilterOnVersion(source.Repository.FindPackages(packageIds), requiredVersion, minimumVersion, maximumVersion)
                         .Select(pkg => new PackageItem {
                             Package = pkg,
                             PackageSource = source,
                             FastPath = MakeFastPath(source, pkg.Id, pkg.Version.ToString())
-                        });
+                        });*/
                 }
             } catch (Exception e) {
                 e.Dump(this);
