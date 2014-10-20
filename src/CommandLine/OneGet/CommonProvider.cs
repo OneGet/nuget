@@ -204,10 +204,9 @@ namespace NuGet.OneGet {
                     request.Verbose("Storing package source {0}", name);
                     
                     // actually yielded by the implementation.
-                    //request.AddPackageSource(name, location, trusted, validated);
+                    request.AddPackageSource(name, location, trusted, validated);
 
                     // and, before you go, Yield the package source back to the caller.
-
                     if (!request.YieldPackageSource(name, location, trusted, true /*since we just registered it*/, validated)) {
                         // always check the return value of a yield, since if it returns false, you don't keep returning data
                         // this can happen if they have cancelled the operation.

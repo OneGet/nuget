@@ -127,7 +127,8 @@ namespace NuGet.OneGet {
                 sources.Add(source);
                 Config = config;
 
-                YieldPackageSource(name, location, isTrusted, true, isValidated);
+                //Yield this from the provider object.
+                //YieldPackageSource(name, location, isTrusted, true, isValidated);
             }
         }
 
