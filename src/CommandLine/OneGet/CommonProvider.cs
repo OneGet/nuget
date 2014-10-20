@@ -202,7 +202,9 @@ namespace NuGet.OneGet {
                     // todo: create the package source (and store it whereever you store it)
 
                     request.Verbose("Storing package source {0}", name);
-                    request.AddPackageSource(name, location, trusted, validated);
+                    
+                    // actually yielded by the implementation.
+                    //request.AddPackageSource(name, location, trusted, validated);
 
                     // and, before you go, Yield the package source back to the caller.
 
