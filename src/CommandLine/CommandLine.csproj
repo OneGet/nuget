@@ -7,6 +7,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\..\</SolutionDir>
     <SolutionPath Condition="$(SolutionPath) == '' Or $(SolutionPath) == '*Undefined*'">$(SolutionDir)\OneGet.sln</SolutionPath>
     <RestorePackages>true</RestorePackages>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -19,7 +20,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -29,11 +29,13 @@
     <DebugSymbols>true</DebugSymbols>
     <Optimize>false</Optimize>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <NoWarn>1591 1684</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
+    <NoWarn>1591 1684</NoWarn>
   </PropertyGroup>
   <Import Project="..\..\Build\NuGet.Settings.targets" />
   <PropertyGroup>
@@ -286,9 +288,7 @@
     <Exec Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsANYCPU)" WorkingDirectory="$(OutputPath)" />
     <!-- produce another signed one if signing assembly -->
     <Exec Condition=" '$(SignASsembly)' == 'true' " Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsSignedANYCPU)" WorkingDirectory="$(OutputPath)" />
-    
     <!-- <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')" Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)" /> -->
-    
     <!-- remove installed files -->
     <Delete Files="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe" Condition="Exists('c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe')" />
     <Delete Files="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb" Condition="Exists('c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb')" />
