@@ -14,11 +14,12 @@ using System.Runtime.InteropServices;
 // Build\Build.proj.
 // When built locally, the NuGet release version is the values specified in this file.
 #if !FIXED_ASSEMBLY_VERSION
-[assembly: AssemblyVersion("2.8.3.4")]
+[assembly: AssemblyVersion("2.8.3.5")]
 [assembly: AssemblyInformationalVersion("2.8.3-oneget")]
 #endif
 
 [assembly: NeutralResourcesLanguage("en-US")]
+
 
 
 

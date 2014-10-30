@@ -39,7 +39,7 @@ namespace NuGet.OneGet {
         protected abstract string ConfigurationFileLocation {get;}
 
         public BaseRequest() {
-            Tag = new ImplictLazy<string[]>(() => GetOptionValues("Tag").ToArray());
+            FilterOnTag = new ImplictLazy<string[]>(() => GetOptionValues("FilterOnTag").ToArray());
             Contains = new ImplictLazy<string>(() => GetOptionValue("Contains"));
             SkipValidate = new ImplictLazy<bool>(() => GetOptionValue("SkipValidate").IsTrue());
             AllowPrereleaseVersions = new ImplictLazy<bool>(() => GetOptionValue("AllowPrereleaseVersions").IsTrue());
@@ -56,7 +56,7 @@ namespace NuGet.OneGet {
             } );
         }
 
-        internal ImplictLazy<string[]> Tag;
+        internal ImplictLazy<string[]> FilterOnTag;
         internal ImplictLazy<string> Contains;
         internal ImplictLazy<bool> SkipValidate;
         internal ImplictLazy<bool> AllowPrereleaseVersions;
@@ -449,10 +449,10 @@ namespace NuGet.OneGet {
             return pkgs.Where(each => each.Id.IndexOf(name, StringComparison.OrdinalIgnoreCase) > -1);
         }
         internal IEnumerable<IPackage> FilterOnTags(IEnumerable<IPackage> pkgs) {
-            if (Tag == null || Tag.Value.Length == 0 ) {
+            if (FilterOnTag == null || FilterOnTag.Value.Length == 0 ) {
                 return pkgs;
             }
-            return pkgs.Where(each => Tag.Value.Any(tag => each.Tags.IndexOf(tag, StringComparison.OrdinalIgnoreCase) > -1));
+            return pkgs.Where(each => FilterOnTag.Value.Any(tag => each.Tags.IndexOf(tag, StringComparison.OrdinalIgnoreCase) > -1));
         }
 
         internal IEnumerable<IPackage> FilterOnContains(IEnumerable<IPackage> pkgs) {
@@ -654,8 +654,8 @@ namespace NuGet.OneGet {
                     criteria = name;
                 }
 
-                if (Tag != null ) {
-                    criteria = Tag.Value.Where(tag => !string.IsNullOrEmpty(tag)).Aggregate(criteria, (current, tag) => current + " tag:" + tag);
+                if (FilterOnTag != null ) {
+                    criteria = FilterOnTag.Value.Where(tag => !string.IsNullOrEmpty(tag)).Aggregate(criteria, (current, tag) => current + " tag:" + tag);
                 }
                 Debug("Searching repository '{0}' for '{1}'", source.Repository.Source, criteria);
                 // var src = PackageRepositoryFactory.Default.CreateRepository(source.Repository.Source);

@@ -84,7 +84,7 @@ namespace NuGet.OneGet {
 
                     switch ((category ?? string.Empty).ToLowerInvariant()) {
                         case "package":
-                            request.YieldDynamicOption("Tag", global::OneGet.ProviderSDK.Constants.OptionType.StringArray, false);
+                            request.YieldDynamicOption("FilterOnTag", global::OneGet.ProviderSDK.Constants.OptionType.StringArray, false);
                             request.YieldDynamicOption("Contains", global::OneGet.ProviderSDK.Constants.OptionType.String, false);
                             request.YieldDynamicOption("AllowPrereleaseVersions", global::OneGet.ProviderSDK.Constants.OptionType.Switch, false);
                             break;
