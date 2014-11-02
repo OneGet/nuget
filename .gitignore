@@ -29,3 +29,5 @@ swidtags/*.exe
 swidtags/*.swidtag
 src/CommandLine/outercurve_sign.msbuild
 pingme.txt
+swidtags/generated
+swidtags/*.old
