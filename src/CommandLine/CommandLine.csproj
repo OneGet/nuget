@@ -270,6 +270,8 @@
       <ILMergeCommandArgsANYCPU>/targetplatform:"v4, $(FrameworkPath)"  /target:exe /out:"Merged\$(ILMergeOutputFileANYCPU)" /log:"Merged\ilmerge.msbuild.log" $(ndebug) /allowDup NuGet.exe NuGet.Core.dll Microsoft.Web.XmlTransform.dll OneGet.ProviderSDK.dll</ILMergeCommandArgsANYCPU>
       <ILMergeCommandArgsSignedANYCPU>/targetplatform:"v4, $(FrameworkPath)" /target:exe /out:"Signed\$(ILMergeOutputFileANYCPU)" /log:"Signed\ilmerge.msbuild.log" $(ndebug) /allowDup /keyfile:"$(AssemblyOriginatorKeyFile)" /delaysign NuGet.exe NuGet.Core.dll Microsoft.Web.XmlTransform.dll OneGet.ProviderSDK.dll</ILMergeCommandArgsSignedANYCPU>
     </PropertyGroup>
+    <Exec Condition="Exists('$(MsBuildProjectDirectory)\cleanup.ps1')" Command="powershell start-process powershell -wait -verb runAs $(MsBuildProjectDirectory)\cleanup.ps1" />
+
     <MakeDir Directories="$(OutputPath)Merged" Condition="!Exists('$(OutputPath)Merged')" />
     <MakeDir Directories="$(OutputPath)Signed" Condition="!Exists('$(OutputPath)Signed')" />
     <Delete Files="$(ILMergeOutputFilePath)" Condition="Exists($(ILMergeOutputFilePath))" />
@@ -290,13 +292,13 @@
     <Exec Condition=" '$(SignASsembly)' == 'true' " Command="&quot;$(ILMergeExe)&quot; $(ILMergeCommandArgsSignedANYCPU)" WorkingDirectory="$(OutputPath)" />
     <MSBuild Condition="'$(Configuration)' != 'Debug' AND Exists('outercurve_sign.msbuild')" Projects="outercurve_sign.msbuild" Properties="TargetDir=$(TargetDir)" /> 
     <!-- remove installed files -->
-    <Delete Files="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe" Condition="Exists('c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe')" />
-    <Delete Files="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb" Condition="Exists('c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb')" />
-    <!-- copy new ones -->
-    <!-- 
-    <Copy SourceFiles="$(ILMergeOutputFilePathANYCPU)" DestinationFiles="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe" />
-    <Copy SourceFiles="$(OutputPath)Merged\$(ILMergeOutputFileANYCPU)" DestinationFiles="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb" Condition="Exists('$(OutputPath)Merged\$(ILMergeOutputFileANYCPU)')" />
-    -->
+    
+    
+    
+    <!-- Put DEBUG versions into place if we're doing a debug build-->
+    <Copy Condition="'$(Configuration)' == 'Debug'" SourceFiles="$(ILMergeOutputFilePathANYCPU)" DestinationFiles="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.exe" />
+    <Copy Condition="'$(Configuration)' == 'Debug' AND Exists('$(OutputPath)Merged\$(ILMergeOutputFileANYCPU)')" SourceFiles="$(OutputPath)Merged\$(ILMergeOutputFileANYCPU)" DestinationFiles="c:\ProgramData\OneGet\ProviderAssemblies\nuget-anycpu.pdb"  />
+    
   </Target>
   <Target Name="AfterBuild">
     <CallTarget Targets="MergeExecutable" />

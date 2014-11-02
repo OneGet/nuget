@@ -292,9 +292,14 @@ namespace NuGet.OneGet {
                         // no worries.
                     }
                 }
-                if (p.HadErrors) {
+                // todo: I'm seeing cases here were we're getting 'HadErrors == true' but can't find 
+                // the error.
+                // disabling until I can find out why, or replace it with DynamicPowerShell and deal with the errors
+                /*
+                if (p.HadErrors ) {
                     return false;
-                }
+                }*
+                 */
             }
             return true;
         }
